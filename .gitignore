@@ -1,0 +1,36 @@
+.superpowers/
+.DS_Store
+target/
+node_modules/
+dist/
+# Tauri regenerates gen/schemas on every build. gen/apple is committed (project.yml,
+# Info.plist, entitlements, xcodeproj, Podfile); its own .gitignore drops build/,
+# Externals/ and xcuserdata/.
+apps/tauri/src-tauri/gen/schemas/
+# gen/android is committed (sources, Gradle wrapper, manifest, res); Tauri's own
+# .gitignore there drops build/, .gradle/, local.properties, tauri.properties and
+# the generated Kotlin. Also: native libs and the frontend copy Gradle packs, and APKs.
+apps/tauri/src-tauri/gen/android/app/src/main/jniLibs/
+apps/tauri/src-tauri/gen/android/app/src/main/assets/
+*.apk
+*.aab
+apps/tauri/test-results/
+apps/tauri/playwright-report/
+
+# Secrets and key material never get committed; fixtures are the exceptions.
+.env*
+*.p12
+*.p8
+*.pfx
+*.jks
+*.keystore
+*.pem
+*.key
+*.sqlite
+*.db
+!crates/core-ssh/tests/keys/**
+!tests/fixtures/keys/**
+!crates/core-store/tests/golden/vault-v1.db
+
+# Output of the throughput bench (TETHER_BENCH=1); local only.
+docs/spikes/

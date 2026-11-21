@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "df -k / | awk 'NR==2 && $4 < 10*1024*1024 {printf \"Low disk: %.1f GB free. Run scripts/clean-cache.sh before heavy builds.\\n\", $4/1048576}'"
+          }
+        ]
+      }
+    ]
+  }
+}

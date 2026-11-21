@@ -1,0 +1,34 @@
+name: Bug report
+description: Something in Termlyx does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Termlyx is in beta. Never paste passwords, private keys, setup codes or vault contents. For a security problem, see SECURITY.md instead.
+  - type: input
+    id: version
+    attributes:
+      label: Termlyx version
+      description: Settings → About.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Platform
+      options: [macOS, Windows, iOS, Android, Linux (built from source), Server only]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected and what happened
+    validations:
+      required: true

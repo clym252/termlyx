@@ -1,0 +1,24 @@
+# Termlyx server without Docker. Install the binary at /usr/local/bin/termlyx-server, then:
+#   sudo useradd --system --no-create-home --shell /usr/sbin/nologin termlyx
+#   sudo cp termlyx-server.service /etc/systemd/system/
+#   sudo systemctl enable --now termlyx-server
+#   journalctl -u termlyx-server    (shows the setup code)
+# Admin commands run as the same user:
+#   sudo -u termlyx TERMLYX_DATA=/var/lib/termlyx termlyx-server invite
+[Unit]
+Description=Termlyx sync server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=termlyx
+Group=termlyx
+StateDirectory=termlyx
+StateDirectoryMode=0700
+UMask=0077
+Environment=TERMLYX_DATA=/var/lib/termlyx
+ExecStart=/usr/local/bin/termlyx-server serve
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

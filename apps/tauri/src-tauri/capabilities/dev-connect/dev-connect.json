@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "dev-connect",
+  "description": "DEV connect form (open_shell with direct parameters); only in builds with the `dev-connect` cargo feature (see build.rs)",
+  "windows": ["main"],
+  "permissions": ["allow-open-shell"]
+}

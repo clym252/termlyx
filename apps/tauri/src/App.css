@@ -1,0 +1,48 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg, #111);
+  color: var(--text, #ddd);
+  font-family: system-ui, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: var(--app-height, 100%);
+  /*
+   * viewport-fit=cover (index.html) draws under the notch / home indicator; Android
+   * draws edge to edge and MainActivity passes the system bars in as --inset-*.
+   */
+  padding: max(env(safe-area-inset-top), var(--inset-top, 0px))
+    max(env(safe-area-inset-right), var(--inset-right, 0px))
+    max(env(safe-area-inset-bottom), var(--inset-bottom, 0px))
+    max(env(safe-area-inset-left), var(--inset-left, 0px));
+  box-sizing: border-box;
+}
+
+.terminal-host {
+  flex: 1;
+  min-height: 0;
+  padding: 4px;
+}
+
+.status-bar {
+  padding: 4px 8px;
+  font-size: 12px;
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+}
+
+.connect-form {
+  display: grid;
+  gap: 8px;
+  max-width: 320px;
+  margin: 10vh auto;
+}
+
+.connect-form input {
+  padding: 6px 8px;
+}

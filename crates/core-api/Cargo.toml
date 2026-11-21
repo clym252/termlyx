@@ -1,0 +1,95 @@
+[package]
+name = "core-api"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# Exposes `VaultService::open_for_tests` (trivially cheap KDF) for other
+# crates' tests. Dev-dependencies only; CI fails if it reaches tether-app's
+# normal graph.
+test-util = []
+
+[dependencies]
+core-ssh = { path = "../core-ssh" }
+core-model = { path = "../core-model" }
+core-crypto = { path = "../core-crypto" }
+core-store = { path = "../core-store" }
+# Wire form of the account material (no I/O, no crypto).
+core-proto = { path = "../core-proto" }
+tokio = { workspace = true }
+bytes = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+secrecy = { workspace = true }
+zeroize = { workspace = true }
+thiserror = { workspace = true }
+keyring = "4.2.0"
+# keyring's error type, and the store hook used on iOS (vault/keychain.rs).
+keyring-core = "1.0.1"
+async-trait = { workspace = true }
+tracing = { workspace = true }
+ssh2-config = "0.8.2"
+
+# Local terminals (local_pty.rs); iOS and Android have none.
+[target.'cfg(not(any(target_os = "ios", target_os = "android")))'.dependencies]
+portable-pty = "0.9.0"
+
+# keyring's `v1` store refuses iOS: there the data-protection keychain is set
+# as keyring-core's default store instead (vault/keychain.rs).
+[target.'cfg(target_os = "ios")'.dependencies]
+apple-native-keyring-store = { version = "1.0.2", features = ["protected"] }
+
+# Android Keystore AES-GCM key + app-private SharedPreferences ciphertext, as
+# keyring-core's default store (vault/keychain.rs). Context comes from
+# ndk-context, which tao initialises. Pinned: security-relevant, audited at 1.0.0.
+[target.'cfg(target_os = "android")'.dependencies]
+android-native-keyring-store = "=1.0.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# Job Object that kills a local shell's whole process tree (local_pty.rs).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+# Windows Hello for quick unlock (vault/presence.rs).
+windows = { workspace = true, features = [
+    "Foundation",
+    "Security_Credentials",
+    "Security_Credentials_UI",
+    "Security_Cryptography",
+    "Storage_Streams",
+    "Win32_Foundation",
+    "Win32_System_WinRT",
+    "Win32_UI_WindowsAndMessaging",
+] }
+# `IAsyncOperation` (the `windows` crate does not re-export it).
+windows-future = { workspace = true }
+
+# Touch ID (macOS), Face ID or Touch ID (iOS) for quick unlock
+# (vault/presence.rs).
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+objc2 = "0.6.5"
+block2 = "0.6.2"
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSString", "NSError", "NSData"] }
+objc2-local-authentication = { version = "0.3.2", default-features = false, features = ["std", "LAContext", "LABiometryType", "block2"] }
+# The OSStatus inside a keychain error: iOS tells "device locked" apart
+# (vault/keychain.rs). Already in the tree through apple-native-keyring-store.
+security-framework = { version = "3.7.0", default-features = false }
+
+[dev-dependencies]
+core-api = { path = ".", features = ["test-util"] }
+core-ssh = { path = "../core-ssh", features = ["test-util"] }
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = { workspace = true }
+# A second connection to the vault file, to make a write fail mid-transaction.
+rusqlite = { workspace = true }
+# SOCKS5 client for the dynamic-forward test. reqwest 0.13 without a TLS
+# feature refuses socks proxy URLs ("scheme is not http"), hence rustls
+# (aws-lc-rs, already built for russh).
+reqwest = { version = "0.13.5", default-features = false, features = ["socks", "rustls"] }

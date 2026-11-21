@@ -1,0 +1,9 @@
+[toolchain]
+# Exact version: release builds must not float. Bump on purpose.
+channel = "1.99.1"
+# clippy is required by CI (`-D warnings`); minimal-profile rustup installs
+# (GitHub runners) do not include it by default.
+components = ["clippy"]
+# iOS targets are intentionally not listed here: every runner would download
+# them. Add them where needed (`rustup target add aarch64-apple-ios-sim` in the
+# CI iOS job, or locally before `tauri ios build`).

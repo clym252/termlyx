@@ -1,0 +1,33 @@
+name: tether-fixtures
+
+services:
+  sshd:
+    # The pinned linuxserver image plus tmux, the fixture key and the init
+    # script (see Dockerfile; no bind mounts, so it runs on a remote host too).
+    build: .
+    image: tether-fixture-sshd:10.3_p1-r1-ls239-tmux
+    container_name: tether-sshd
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Etc/UTC
+      USER_NAME: tether
+      USER_PASSWORD: tether-test
+      PASSWORD_ACCESS: "true"
+      PUBLIC_KEY_FILE: /keys/id_ed25519_test.pub
+    ports:
+      - "127.0.0.1:2222:2222"
+    networks:
+      - default
+      - internal
+
+  # Destination for the port-forward tests: an HTTP server that answers with
+  # its hostname. Reachable only from sshd (as web:80), not from the host.
+  web:
+    image: traefik/whoami:v1.11.0
+    networks:
+      - internal
+
+networks:
+  internal:
+    internal: true

@@ -1,0 +1,48 @@
+# Tether sync server.
+#
+#   docker compose -f server/compose.yml up -d --build
+#
+# Settings come from the shell or from a .env file next to this file (the
+# deploy script keeps them in ~/tether/deploy.env on the host):
+#   TETHER_NAMES  DNS names in the certificate (comma list)
+#   TETHER_IPS    IP addresses in the certificate (comma list)
+#   TETHER_URL    public URL put into invites; needed if the public port is not 443
+#   TETHER_PORT   host port that maps to the container's 8443 (default 443)
+#   TETHER_TLS, TETHER_TLS_CERT, TETHER_TLS_KEY, TETHER_ALLOW_PLAIN, TETHER_BIND
+#                 optional, passed through only when set (see README, TLS)
+# Each is also read as TERMLYX_X, which wins over TETHER_X.
+# See server/README.md.
+name: tether # override with `-p NAME` / COMPOSE_PROJECT_NAME for a second copy
+
+services:
+  tether:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: tether-server:local
+    ports:
+      - "${TERMLYX_PORT:-${TETHER_PORT:-443}}:8443"
+    volumes:
+      - tether-data:/data
+    environment:
+      TETHER_NAMES: ${TETHER_NAMES:-}
+      TETHER_IPS: ${TETHER_IPS:-}
+      # Passed through only when set (an empty value would be taken as a URL).
+      TETHER_URL:
+      TETHER_TLS:
+      TETHER_TLS_CERT:
+      TETHER_TLS_KEY:
+      TETHER_ALLOW_PLAIN:
+      TETHER_BIND:
+      TERMLYX_NAMES:
+      TERMLYX_IPS:
+      TERMLYX_URL:
+      TERMLYX_TLS:
+      TERMLYX_TLS_CERT:
+      TERMLYX_TLS_KEY:
+      TERMLYX_ALLOW_PLAIN:
+      TERMLYX_BIND:
+    restart: unless-stopped
+
+volumes:
+  tether-data:

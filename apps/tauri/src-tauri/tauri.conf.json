@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Termlyx",
+  "version": "0.1.0",
+  "identifier": "ca.clym.termlyx",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Termlyx",
+        "width": 1000,
+        "height": 640,
+        "minWidth": 720,
+        "minHeight": 480,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "license": "Apache-2.0",
+    "copyright": "Copyright 2026 Termlyx contributors",
+    "publisher": "Termlyx contributors",
+    "targets": ["app", "dmg", "nsis", "deb", "rpm", "appimage"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "minSdkVersion": 30
+    },
+    "iOS": {
+      "minimumSystemVersion": "18.0"
+    },
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "nsis": { "installMode": "currentUser" }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg2NEQyREJCMDhDQUQ5M0MKUldRODJjb0l1eTFOaGptUGZmQ3MwaUdxdTNBT2VwQ1R4T0E4dzdRNW9BeEQrTTVFbWhIcmFINkwK",
+      "endpoints": ["https://github.com/clym252/termlyx/releases/latest/download/latest.json"]
+    }
+  }
+}

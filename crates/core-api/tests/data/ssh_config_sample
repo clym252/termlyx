@@ -1,0 +1,33 @@
+# Tether ssh_config import sample (fixture data only: no real hosts or keys)
+
+Host web
+    HostName web.example.com
+    Port 2222
+    User deploy
+    IdentityFile ~/.ssh/id_deploy
+
+# Two aliases on one line, sharing the user and key of "web".
+Host db1 db2
+    HostName db.example.com   # trailing comment
+    User deploy
+    IdentityFile ~/.ssh/id_deploy
+
+# Needs a jump host: skipped until Phase 4.
+Host behind-bastion
+    HostName 10.9.9.9
+    User ops
+    ProxyJump bastion.example.com
+
+# The tests pass a vault host with this label as "existing".
+Host already-here
+    HostName already.example.com
+
+# Concrete host that also matches the "*.corp" block below.
+Host intranet.corp
+    HostName 10.1.1.1
+
+Host *.corp
+    User corpuser
+
+Host *
+    ServerAliveInterval 60

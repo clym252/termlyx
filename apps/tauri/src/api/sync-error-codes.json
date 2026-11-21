@@ -1,0 +1,14 @@
+{
+  "nowWhileOff": "syncOff",
+  "devicesWhileOff": "syncOff",
+  "signInWhileOff": "syncOff",
+  "parseGarbageCode": "invalidCode",
+  "checkServerBadAddress": "invalidAddress",
+  "linkCodeBadAddress": "invalidAddress",
+  "enableBeforeCreate": "notInitialized",
+  "enableWhileLocked": "locked",
+  "enableWithAddDeviceCode": "invalidCode",
+  "joinOverExistingVault": "vaultExists",
+  "renameUnknownDevice": "notFound",
+  "revokeUnknownDevice": "notFound"
+}

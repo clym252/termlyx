@@ -1,0 +1,96 @@
+[package]
+name = "tether-app"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Termlyx desktop app"
+
+[lib]
+# The `_lib` suffix is required to keep the lib name distinct from the bin name on Windows.
+name = "tether_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+default = []
+# The DEV connect form's `open_shell` command (direct host/user/password).
+# Off by default; never enabled for distributable builds.
+dev-connect = []
+# Phase 0 throughput harness (`bench_config`/`bench_report`, TETHER_BENCH).
+# It drives a shell through the DEV connect form, hence `dev-connect`. Off by
+# default; never enabled for distributable builds.
+bench = ["dev-connect"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+async-trait = { workspace = true }
+tauri = { version = "2", features = [] }
+# Native file picker (open only; see capabilities/default.json).
+tauri-plugin-dialog = "=2.8.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+secrecy = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+uuid = { workspace = true }
+core-ssh = { path = "../../../crates/core-ssh" }
+core-api = { path = "../../../crates/core-api" }
+core-model = { path = "../../../crates/core-model" }
+core-store = { path = "../../../crates/core-store" }
+core-proto = { path = "../../../crates/core-proto" }
+core-sync = { path = "../../../crates/core-sync" }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+# Signed self-update (capabilities/desktop.json): the updater checks the
+# release manifest and installs; process relaunches after it. Never on mobile.
+tauri-plugin-updater = "=2.14.1"
+tauri-plugin-process = "=2.4.0"
+
+[target.'cfg(any(target_os = "ios", target_os = "android"))'.dependencies]
+# Camera QR scanner for joining a synced vault (capabilities/mobile.json).
+tauri-plugin-barcode-scanner = "=2.5.3"
+# Terminal copy/paste (capabilities/mobile.json). On iOS: UIPasteboard, which
+# asks with its own paste prompt (and honours the app's "Paste from Other
+# Apps" setting) instead of WebKit's "Paste" callout on every read.
+tauri-plugin-clipboard-manager = "=2.5.0"
+
+[target.'cfg(target_os = "android")'.dependencies]
+# Biometric quick unlock's plugin payload (src/android.rs): base64 challenge
+# and MAC, the MAC zeroized. Both already in the workspace.
+data-encoding = { workspace = true }
+zeroize = { workspace = true }
+# Stopping the keep-alive service without the Activity (src/android.rs). Both
+# already in the graph through Tauri/tao; same versions (ndk-context holds the
+# application context tao stores at launch).
+jni = "0.21"
+ndk-context = "0.1"
+
+[target.'cfg(target_os = "ios")'.dependencies]
+# Objective-C runtime, to remove WKWebView's keyboard accessory bar (src/ios.rs).
+# Already in the graph through Tauri/wry; same version.
+objc2 = "0.6"
+# Background keep-alive's location updates (src/ios/keepalive.rs). All
+# three are already in the graph through Tauri/wry; same versions.
+objc2-core-location = { version = "=0.3.2", default-features = false, features = ["std", "CLLocation", "CLLocationManager", "CLLocationManagerDelegate"] }
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSArray", "NSError", "NSObject"] }
+dispatch2 = { version = "=0.3.1", default-features = false, features = ["std"] }
+
+[target.'cfg(windows)'.dependencies]
+# GetLogicalDrives, for the SFTP local pane's drive list; MessageBoxW, for
+# a data move that fails at launch (src/migrate.rs).
+windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem", "Win32_UI_WindowsAndMessaging"] }
+
+[dev-dependencies]
+bytes = { workspace = true }
+# AcceptAll, fakes and the cheap-KDF vault for tests only; CI fails if
+# test-util reaches the normal graph.
+core-api = { path = "../../../crates/core-api", features = ["test-util"] }
+core-ssh = { path = "../../../crates/core-ssh", features = ["test-util"] }
+tempfile = { workspace = true }
+# In-process sync server for the sync command tests. Dev-only: `cargo tree -p
+# tether-app -e normal | grep -E "test-util|tether-server"` must stay empty.
+tether-server = { path = "../../../server", features = ["test-util"] }

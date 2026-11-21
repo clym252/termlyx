@@ -1,0 +1,10 @@
+# Used by `docker build -f server/Dockerfile` (BuildKit reads
+# <Dockerfile>.dockerignore before the context's .dockerignore). Allow-list:
+# the build needs exactly these paths of the repository root.
+*
+!Cargo.lock
+!crates/core-proto
+!server
+server/tests
+**/target
+**/.DS_Store

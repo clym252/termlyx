@@ -1,0 +1,36 @@
+name: publish latest image
+# Moves ghcr.io/clym252/termlyx-server:latest to a release's image only once the
+# owner publishes that release. Same digest, so the cosign signature and
+# attestations made by release.yml still apply.
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+env:
+  OWNER: clym252 # GitHub owner; keep in step with release.yml
+jobs:
+  latest:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Point latest at the release image
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a vX.Y.Z release tag: $TAG" >&2; exit 1; }
+          img="ghcr.io/${OWNER}/termlyx-server"
+          docker buildx imagetools create -t "$img:latest" "$img:$TAG"
+          want="$(docker buildx imagetools inspect "$img:$TAG" --format '{{json .Manifest.Digest}}')"
+          got="$(docker buildx imagetools inspect "$img:latest" --format '{{json .Manifest.Digest}}')"
+          echo "latest -> $got"
+          [ "$want" = "$got" ] || { echo "latest digest $got differs from $TAG digest $want" >&2; exit 1; }

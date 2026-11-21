@@ -1,0 +1,92 @@
+import type { Theme } from "../types";
+
+/**
+ * Ayu, from the ayu npm package 8.0.1 (ayu-theme/ayu-colors) editor and syntax colours, MIT. Ayu publishes no terminal mapping; the ANSI mapping from its syntax colours is ours.
+ * https://github.com/ayu-theme/ayu-colors. The app chrome mapping is ours; see themes/README.md.
+ */
+
+export const ayuDark: Theme = {
+  id: "ayu-dark",
+  name: "Ayu Dark",
+  dark: true,
+  ui: {
+    bg: "#0d1017",
+    panel: "#14171d",
+    "panel-raised": "#1d2025",
+    border: "#313337",
+    text: "#bfbdb6",
+    muted: "#828896",
+    accent: "#59c2ff",
+    "accent-text": "#0d1017",
+    danger: "#f07178",
+    "danger-bg": "#2f1f26",
+    focus: "#59c2ff",
+  },
+  terminal: {
+    background: "#0d1017",
+    foreground: "#bfbdb6",
+    cursor: "#bfbdb6",
+    cursorAccent: "#0d1017",
+    selectionBackground: "#1b3a5b",
+    black: "#131721",
+    red: "#f07178",
+    green: "#aad94c",
+    yellow: "#ffb454",
+    blue: "#59c2ff",
+    magenta: "#d2a6ff",
+    cyan: "#95e6cb",
+    white: "#bfbdb6",
+    brightBlack: "#565b66",
+    brightRed: "#f07178",
+    brightGreen: "#aad94c",
+    brightYellow: "#ffb454",
+    brightBlue: "#59c2ff",
+    brightMagenta: "#d2a6ff",
+    brightCyan: "#95e6cb",
+    brightWhite: "#ffffff",
+  },
+};
+
+/** Adjusted for contrast: foreground, red, green, yellow, blue, cyan, brightRed, brightGreen, brightYellow, brightBlue, brightCyan (lightness only; see themes/README.md). */
+export const ayuLight: Theme = {
+  id: "ayu-light",
+  name: "Ayu Light",
+  dark: false,
+  ui: {
+    bg: "#fcfcfc",
+    panel: "#f5f5f6",
+    "panel-raised": "#ededee",
+    border: "#dadbdc",
+    text: "#4b4f53",
+    muted: "#646b73",
+    accent: "#2293e3",
+    "accent-text": "#000000",
+    danger: "#d11616",
+    "danger-bg": "#fae5e5",
+    focus: "#2b97e4",
+  },
+  terminal: {
+    background: "#fcfcfc",
+    foreground: "#52575b",
+    cursor: "#5c6166",
+    cursorAccent: "#fcfcfc",
+    selectionBackground: "#d1e4f4",
+    black: "#5c6166",
+    red: "#ef6363",
+    green: "#779f00",
+    yellow: "#cc800f",
+    blue: "#2b97e4",
+    magenta: "#a37acc",
+    cyan: "#3aa380",
+    white: "#e6e6e6",
+    brightBlack: "#8a9199",
+    brightRed: "#ef6363",
+    brightGreen: "#779f00",
+    brightYellow: "#cc800f",
+    brightBlue: "#2b97e4",
+    brightMagenta: "#a37acc",
+    brightCyan: "#3aa380",
+    brightWhite: "#ffffff",
+    ipHighlight: "#8f5dc1",
+  },
+};

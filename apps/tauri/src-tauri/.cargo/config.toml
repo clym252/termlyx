@@ -1,0 +1,9 @@
+# Opt-in dev code signing (docs/dev-signing.md). Cargo applies a runner to
+# `cargo run`, which `tauri dev` does from this directory; it does not apply to
+# workspace-root `cargo test`. The path is relative to this file's parent
+# directory (src-tauri). Without TETHER_DEV_SIGN_IDENTITY the script only execs.
+[target.aarch64-apple-darwin]
+runner = "../../../scripts/dev-sign-run.sh"
+
+[target.x86_64-apple-darwin]
+runner = "../../../scripts/dev-sign-run.sh"

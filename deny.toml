@@ -1,0 +1,46 @@
+# cargo-deny policy. Keep [licenses] allow identical to ALLOWED_LICENSES in
+# scripts/release/npm-licenses.mjs (cargo-about reuses it too).
+[graph]
+all-features = true
+
+[licenses]
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "CC0-1.0",
+  "BSL-1.0",
+  "MPL-2.0",
+  "OFL-1.1",
+  "CDLA-Permissive-2.0", # webpki-roots (Mozilla root certificate data)
+]
+
+[advisories]
+yanked = "deny"
+unmaintained = "workspace"
+# No upstream fix exists for either; revisit when a patched release ships.
+ignore = [
+  # rsa Marvin timing side channel; no patched rsa release. Reachable: rsa comes
+  # only via russh/ssh-key (core-ssh) and signs for SSH client auth with the
+  # user's RSA keys (generated or imported). Host-key checks are public-key ops
+  # (unaffected). Exploiting it needs timing of many signatures by a remote
+  # observer, so exposure is low; drop the ignore when a patched rsa lands.
+  "RUSTSEC-2023-0071",
+  # C SQLite CVE in bundled libsqlite3-sys 0.37, pulled by rusqlite 0.39 (core-store,
+  # the app's local vault) and sqlx-sqlite (tether-server); both are reachable. No
+  # fixed version exists yet; rusqlite is held at 0.39 because sqlx-sqlite needs
+  # libsqlite3-sys <0.38 and only one crate may link sqlite3. Revisit on a fix.
+  "RUSTSEC-2026-0459",
+]
+
+[bans]
+multiple-versions = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

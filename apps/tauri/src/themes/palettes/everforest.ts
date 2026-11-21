@@ -1,0 +1,92 @@
+import type { Theme } from "../types";
+
+/**
+ * Everforest (medium), from sainnhe/everforest autoload/everforest.vim palette and colors/everforest.vim terminal mapping, MIT.
+ * https://github.com/sainnhe/everforest. The app chrome mapping is ours; see themes/README.md.
+ */
+
+export const everforestDark: Theme = {
+  id: "everforest-dark",
+  name: "Everforest Dark",
+  dark: true,
+  ui: {
+    bg: "#2d353b",
+    panel: "#343b3f",
+    "panel-raised": "#3c4245",
+    border: "#4e5251",
+    text: "#dfd6c2",
+    muted: "#a5b0b7",
+    accent: "#7fbbb3",
+    "accent-text": "#2d353b",
+    danger: "#eb9899",
+    "danger-bg": "#494045",
+    focus: "#7fbbb3",
+  },
+  terminal: {
+    background: "#2d353b",
+    foreground: "#d3c6aa",
+    cursor: "#d3c6aa",
+    cursorAccent: "#2d353b",
+    selectionBackground: "#543a48",
+    black: "#475258",
+    red: "#e67e80",
+    green: "#a7c080",
+    yellow: "#dbbc7f",
+    blue: "#7fbbb3",
+    magenta: "#d699b6",
+    cyan: "#83c092",
+    white: "#d3c6aa",
+    brightBlack: "#475258",
+    brightRed: "#e67e80",
+    brightGreen: "#a7c080",
+    brightYellow: "#dbbc7f",
+    brightBlue: "#7fbbb3",
+    brightMagenta: "#d699b6",
+    brightCyan: "#83c092",
+    brightWhite: "#d3c6aa",
+  },
+};
+
+/** Adjusted for contrast: foreground, green, yellow, magenta, cyan, brightGreen, brightYellow, brightMagenta, brightCyan (lightness only; see themes/README.md). */
+export const everforestLight: Theme = {
+  id: "everforest-light",
+  name: "Everforest Light",
+  dark: false,
+  ui: {
+    bg: "#fdf6e3",
+    panel: "#f6f0de",
+    "panel-raised": "#ede8d7",
+    border: "#d9d6c8",
+    text: "#434d53",
+    muted: "#5c6a72",
+    accent: "#3991c1",
+    "accent-text": "#000000",
+    danger: "#cc0c08",
+    "danger-bg": "#fcdecd",
+    focus: "#3a94c5",
+  },
+  terminal: {
+    background: "#fdf6e3",
+    foreground: "#4a555b",
+    cursor: "#5c6a72",
+    cursorAccent: "#fdf6e3",
+    selectionBackground: "#eaedc8",
+    black: "#5c6a72",
+    red: "#f85552",
+    green: "#849701",
+    yellow: "#b68300",
+    blue: "#3a94c5",
+    magenta: "#dd61b6",
+    cyan: "#339f76",
+    white: "#e6e2cc",
+    brightBlack: "#5c6a72",
+    brightRed: "#f85552",
+    brightGreen: "#849701",
+    brightYellow: "#b68300",
+    brightBlue: "#3a94c5",
+    brightMagenta: "#dd61b6",
+    brightCyan: "#339f76",
+    brightWhite: "#e6e2cc",
+    ipHighlight: "#c72b96",
+  },
+};

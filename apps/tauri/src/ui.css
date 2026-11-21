@@ -1,0 +1,2941 @@
+/*
+ * Tether UI. Colours come from CSS variables so the themes of Task 14 can
+ * swap them; dark first.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #121418;
+  --panel: #191c22;
+  --panel-raised: #20242c;
+  --border: #2c313b;
+  --text: #e3e6eb;
+  --muted: #8a92a0;
+  --accent: #6aa7ff;
+  --accent-text: #08111f;
+  --danger: #ff7a7a;
+  --danger-bg: #3a1d20;
+  --focus: #9ec5ff;
+  /* Typing goes to several panes: amber, unlike anything else in the UI, so it is never missed. */
+  --broadcast: #ffb020;
+  /* Host badge colours (background / foreground, each pair >= 6:1), picked per host by id. */
+  --badge-1-bg: #23406b;
+  --badge-1-fg: #b4d3ff;
+  --badge-2-bg: #3d2d69;
+  --badge-2-fg: #d3c2ff;
+  --badge-3-bg: #1f4f38;
+  --badge-3-fg: #a6e8c0;
+  --badge-4-bg: #5c4513;
+  --badge-4-fg: #ffdc94;
+  --badge-5-bg: #63283a;
+  --badge-5-fg: #ffbfd0;
+  --badge-6-bg: #175052;
+  --badge-6-fg: #98ebe7;
+  --badge-7-bg: #434f18;
+  --badge-7-fg: #d9f08f;
+  --badge-8-bg: #64361f;
+  --badge-8-fg: #ffc8a6;
+  --on-danger: #2a0a0a;
+  --warning: #e3b341;
+  --on-warning: #1b1500;
+  --success: #4ec07a;
+  --radius: 8px;
+  --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Mono", Consolas, monospace;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-weight: 600;
+}
+h1 {
+  font-size: 20px;
+}
+h2 {
+  font-size: 16px;
+}
+p {
+  margin: 0;
+}
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 12px;
+}
+.mono {
+  font-family: var(--mono);
+}
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- controls ------------------------------------------------------- */
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 6px 12px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-danger);
+  font-weight: 600;
+}
+button.danger-text {
+  color: var(--danger);
+}
+button.link {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  color: var(--accent);
+  text-align: left;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+.field > span,
+.field > label {
+  color: var(--muted);
+  font-size: 12px;
+}
+.form {
+  display: grid;
+  gap: 12px;
+}
+.form-error {
+  color: var(--danger);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* -- full-screen states (create, unlock, error) ------------------------ */
+
+.center-screen {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+}
+.card {
+  width: min(420px, 100%);
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* -- shell ------------------------------------------------------------- */
+
+.shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 200px;
+  flex: none;
+  padding: 12px;
+  /* The rail clips its labels as the width closes; nothing in the sidebar overflows otherwise. */
+  overflow: hidden;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  transition: width 160ms ease, padding 160ms ease;
+}
+.sidebar[data-mode="rail"] {
+  width: 48px;
+  padding: 12px 4px;
+  align-items: stretch;
+}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.brand {
+  padding: 4px 8px;
+}
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.wordmark-text {
+  font-size: 15px;
+  letter-spacing: 0.22em;
+}
+.card .wordmark {
+  margin-bottom: 4px;
+}
+.card .wordmark-text {
+  font-size: 20px;
+}
+.search-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.search-button .nav-label {
+  flex: 1;
+  text-align: left;
+}
+kbd {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+}
+.nav-item:hover:not(:disabled) {
+  background: var(--panel-raised);
+}
+.nav-item[aria-current="page"] {
+  background: var(--panel-raised);
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav-icon {
+  flex: none;
+}
+/* The collapse/expand control: icon only, at the head's end (the head's middle in the rail). */
+.sidebar-toggle {
+  width: auto;
+  color: var(--muted);
+}
+.sidebar[data-mode="rail"] .sidebar-head {
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.sidebar[data-mode="rail"] .brand {
+  padding: 4px 0;
+}
+/* The rail: icons centred in the 48px column; the count rides the icon's corner. */
+.sidebar[data-mode="rail"] .nav-item,
+.sidebar[data-mode="rail"] .search-button {
+  justify-content: center;
+  min-height: 36px;
+  padding: 6px 0;
+}
+.sidebar[data-mode="rail"] .sidebar-toggle {
+  width: 100%;
+}
+.rail-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+.conflict-badge .rail-badge {
+  background: var(--warning);
+  color: var(--on-warning);
+}
+.sync-status-compact {
+  justify-content: center;
+}
+/* Touch screens: the rail's targets reach 44pt. */
+@media (pointer: coarse) {
+  .sidebar[data-mode="rail"] .nav-item,
+  .sidebar[data-mode="rail"] .search-button {
+    min-height: 44px;
+  }
+}
+/* The name of a rail icon while a finger rests on it (touch has no hover). */
+.rail-tip {
+  position: fixed;
+  z-index: 50;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-raised);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.35);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* No text-selection callout when a finger rests on a rail icon. */
+.sidebar[data-mode="rail"] button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+.sidebar-foot {
+  margin-top: auto;
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+/* Hidden sidebar: pages get the phone's top bar (its title stands in for the page heading); ☰ leads the tab bar. */
+.main.sidebar-hidden .page-head {
+  justify-content: flex-end;
+}
+.main.sidebar-hidden .page-head > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.show-sidebar {
+  flex: none;
+  align-self: flex-start;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px;
+  /* A page taller than the window scrolls here, under a fixed sidebar. */
+  overflow: auto;
+}
+/* Holds a kept-mounted page (`hidden` while another view shows); the page fills it as it fills .main. */
+.page-slot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* -- hosts ----------------------------------------------------------------- */
+
+/* The page itself stays put: the card list scrolls, and the editor panel is pinned to its edge. */
+.hosts-page {
+  --editor-w: clamp(320px, 36vw, 420px);
+  position: relative;
+  overflow: hidden;
+}
+/* Room for the panel, so the cards behind it stay in view and usable. */
+.hosts-page.with-editor {
+  padding-right: calc(var(--editor-w) + 16px);
+}
+.hosts-top {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.hosts-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+/* As specific as the full-width rule for text inputs, and later. */
+.hosts-tools input.hosts-filter {
+  width: 180px;
+}
+.hosts-tools .tag-filter {
+  margin-bottom: 0;
+}
+.breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.breadcrumb ol > li {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.breadcrumb ol > li + li::before {
+  content: "›";
+  padding: 0 4px;
+  color: var(--muted);
+}
+.crumb {
+  padding: 2px 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  overflow-wrap: anywhere;
+}
+button.crumb {
+  color: var(--muted);
+}
+button.crumb:hover {
+  background: var(--panel-raised);
+  color: inherit;
+}
+.crumb[aria-current="location"] {
+  color: inherit;
+  font-weight: 600;
+}
+.crumb[data-drop="true"] {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+.crumb-actions {
+  position: relative;
+}
+.crumb-more {
+  padding: 0 8px;
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+.hosts-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+.host-list-pane {
+  min-height: 0;
+  overflow: auto;
+}
+.host-list-pane {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.hosts-section {
+  display: grid;
+  gap: 8px;
+}
+.section-head {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.section-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hosts-empty {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 24px 0;
+}
+.row-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  min-width: 150px;
+  margin: 2px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.3);
+}
+.row-menu button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+}
+.row-menu button:hover,
+.row-menu button:focus-visible {
+  background: var(--panel);
+}
+/* Entries with a shortcut hint or a check (the layout menus). */
+.row-menu button:has(kbd) {
+  display: flex;
+  align-items: center;
+}
+.row-menu button:has(kbd) span {
+  margin-right: 16px;
+}
+.row-menu button:has(kbd) kbd {
+  margin-left: auto;
+}
+.row-menu button[aria-disabled="true"] {
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: default;
+}
+.row-menu button[aria-disabled="true"]:hover {
+  background: none;
+}
+.row-menu button[role="menuitemcheckbox"]::before {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+}
+.row-menu button[aria-checked="true"]::before {
+  content: "✓";
+}
+.row-menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
+/* Host and folder cards of the Hosts page. */
+.card-grid {
+  display: grid;
+  /* min(): a pane narrower than a card (editor panel open) shrinks the card instead of scrolling. */
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 8px;
+}
+/* Cards fill their row, so a card with tags does not leave its neighbours shorter. */
+.card-grid > li {
+  display: grid;
+  min-width: 0;
+}
+.host-card,
+.folder-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 56px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.host-card:hover,
+.host-card:focus-within,
+.folder-card:hover,
+.folder-card:focus-within {
+  background: var(--panel-raised);
+}
+.host-card[data-editing="true"] {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+.folder-card[data-drop="true"] {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+.host-card-main,
+.folder-card-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 10px;
+}
+.host-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.host-card-text,
+.folder-card-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.host-card-label,
+.folder-card-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.host-card-sub,
+.host-card-path,
+.folder-card-count {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.host-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 12px;
+  overflow: hidden;
+}
+.host-card-tags .tag-pill {
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.tag-more {
+  flex: none;
+  color: var(--muted);
+}
+.folder-glyph {
+  flex: none;
+  color: var(--accent);
+}
+/* Faded rather than hidden, so keyboard and screen readers still reach them. */
+.host-card-actions {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  padding-left: 8px;
+  background: var(--panel-raised);
+  transform: translateY(-50%);
+  opacity: 0;
+  /* Invisible actions take no clicks: those go to the card (connect). */
+  pointer-events: none;
+}
+.host-card:hover .host-card-actions,
+.host-card:focus-within .host-card-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Room for the shown actions, so they never cover the label or address. */
+.host-card:hover .host-card-main,
+.host-card:focus-within .host-card-main {
+  padding-right: 124px;
+}
+.host-card-actions button {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.folder-card-more {
+  flex: none;
+  align-self: stretch;
+  padding: 0 10px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  opacity: 0;
+}
+.folder-card:hover .folder-card-more,
+.folder-card:focus-within .folder-card-more,
+.folder-card-more[aria-expanded="true"] {
+  opacity: 1;
+}
+.host-card .row-menu,
+.folder-card .row-menu {
+  top: calc(100% - 4px);
+  right: 8px;
+}
+
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.tag-chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  border-color: var(--tag-color, var(--border));
+  font-size: 12px;
+}
+.tag-chip[aria-pressed="true"] {
+  background: var(--tag-color, var(--accent));
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.host-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: var(--panel);
+}
+.host-row[aria-current="true"] {
+  border-color: var(--accent);
+}
+.host-label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.host-address {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+}
+.tag-pill {
+  padding: 0 8px;
+  border: 1px solid var(--tag-color, var(--border));
+  border-radius: 999px;
+}
+.empty {
+  padding: 24px 0;
+}
+
+.editor-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  width: var(--editor-w);
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px rgb(0 0 0 / 0.25);
+}
+.editor-panel:focus {
+  outline: none;
+}
+/* Pinned header and footer around a scrolling body. */
+.editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.editor-head h2 {
+  margin: 0;
+}
+.editor-close {
+  padding: 2px 8px;
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+.editor-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+  align-content: start;
+}
+.editor-foot {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.editor-foot .form-error {
+  margin: 0;
+}
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  container-type: inline-size;
+}
+/* Narrow window: the panel takes the whole content area. */
+@media (max-width: 759px) {
+  .editor-panel {
+    left: 0;
+    width: auto;
+    border-left: none;
+  }
+  .hosts-page.with-editor {
+    padding-right: 20px;
+  }
+}
+.editor-actions .danger-text {
+  margin-left: auto;
+}
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: grid;
+  gap: 10px;
+}
+legend {
+  padding: 0;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.tag-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.tag-check,
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inherited-field {
+  display: grid;
+  gap: 4px;
+  padding-top: 6px;
+}
+.source {
+  margin: 0;
+}
+
+/* -- search ------------------------------------------------------------------ */
+
+.search-results {
+  display: grid;
+  gap: 2px;
+  max-height: 50vh;
+  overflow: auto;
+}
+.search-group {
+  padding: 8px 10px 2px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.search-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.search-item.active {
+  background: var(--panel-raised);
+  outline: 1px solid var(--accent);
+}
+.search-item .small {
+  grid-column: 1 / -1;
+}
+.search-item kbd {
+  grid-column: 2;
+  grid-row: 1;
+}
+.search-detail {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.search-keys {
+  margin: 4px 0 0;
+}
+
+/* -- dialogs -------------------------------------------------------------------- */
+
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  /* The body scrolls, under its pinned title and action row. */
+  overflow: hidden;
+  padding: 0;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.dialog-wide {
+  width: min(560px, calc(100vw - 32px));
+}
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+.dialog-body {
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 34px);
+  padding: 0 20px;
+  overflow: auto;
+}
+/* Pinned, so the title and the buttons are in reach however tall the content. */
+.dialog-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 20px 0 4px;
+  background: var(--panel);
+}
+.dialog-content {
+  display: grid;
+  gap: 12px;
+}
+.dialog-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 0 20px;
+  background: var(--panel);
+}
+.choices {
+  gap: 8px;
+}
+
+/* The `hidden` attribute wins over display rules (kept-mounted views). */
+[hidden] {
+  display: none !important;
+}
+.prewrap {
+  white-space: pre-wrap;
+}
+
+/* -- terminal workspace -------------------------------------------------------- */
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.tabbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.tablist {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  max-width: 220px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--panel-raised);
+}
+.tab.selected {
+  background: var(--bg);
+}
+/* Where a dragged tab will land: a bar on the side of the tab under the pointer. */
+.tab[data-drop-before] {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.tab[data-drop-after] {
+  box-shadow: inset -2px 0 0 var(--accent);
+}
+.tab-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border: none;
+  background: none;
+}
+/* The name gives way (ellipsis) so the Broadcast badge beside it never does. */
+.tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab.selected .tab-title {
+  color: var(--accent);
+  font-weight: 600;
+}
+/* A dot and the word, in the tab itself: broadcasting must show from any tab. */
+.tab-broadcast {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--broadcast);
+}
+.tab-broadcast::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.tab-rename {
+  width: 14ch;
+  margin: 2px 4px;
+  padding: 1px 4px;
+  font: inherit;
+}
+.tab-close,
+.tab-new,
+.tab-layout {
+  border: none;
+  background: none;
+  padding: 2px 8px;
+  color: var(--muted);
+}
+.tab-close:hover,
+.tab-new:hover,
+.tab-layout:hover,
+.tab-layout[aria-expanded="true"] {
+  color: var(--text);
+}
+/* The Layout button sits at the strip's right edge and anchors its menu
+   (RowMenu hangs under the positioned parent, right-aligned). */
+.tab-layout-wrap {
+  position: relative;
+  display: flex;
+  margin-left: auto;
+}
+.tab-layout {
+  display: flex;
+  align-items: center;
+}
+/* Touch screens (an iPad): the tab strip's targets reach 44pt. */
+@media (pointer: coarse) {
+  .tab-title,
+  .tab-close,
+  .tab-new,
+  .tab-layout {
+    min-height: 44px;
+  }
+  .tab-close,
+  .tab-new,
+  .tab-layout {
+    min-width: 44px;
+  }
+  .tab-title {
+    padding-inline: 12px;
+  }
+}
+.tab-panel {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+/* The tab panels and, beside them, the Snippets and themes panel. */
+.workspace-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.workspace-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 280px;
+  min-height: 0;
+  padding: 8px;
+  gap: 8px;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+}
+.side-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.side-panel-tabs {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+}
+.side-panel-tabs button {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+}
+.side-panel-tabs button[aria-pressed="true"] {
+  background: var(--panel-raised);
+  color: var(--text);
+}
+.side-panel-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Themes tab: one swatch per theme, the current one ringed. */
+.themes-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.theme-group h3 {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.theme-options {
+  display: grid;
+  gap: 6px;
+}
+.sidebar-choices {
+  grid-auto-flow: column;
+}
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-height: 44px;
+  padding: 4px;
+  text-align: left;
+  border-color: transparent;
+}
+.theme-option[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--panel-raised);
+}
+.theme-swatch {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.theme-name {
+  color: var(--text);
+}
+/* Phone: the panel sits under the terminal where the keyboard would be; the terminal shrinks to fit above it. */
+.layout-phone .workspace-body {
+  flex-direction: column;
+}
+.layout-phone .side-panel {
+  /* Above the terminal's layers while it refits to the smaller space. */
+  position: relative;
+  z-index: 1;
+  width: auto;
+  height: 42%;
+  padding: 4px 12px 0;
+  border-left: none;
+  border-top: 1px solid var(--border);
+}
+.side-panel-title {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+}
+.side-panel-phone .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: none;
+  font-size: 22px;
+}
+/* In the panel snippets are a plain list: no box per row. */
+.side-panel .snippet-main,
+.side-panel .snippet-menu-wrap .icon-button {
+  border-color: transparent;
+  background: none;
+}
+.side-panel .snippet-list ul {
+  gap: 0;
+}
+.side-panel .snippet-row + .snippet-row {
+  border-top: 1px solid var(--border);
+}
+.split-group {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.split-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.split-handle {
+  flex: none;
+  min-width: 4px;
+  min-height: 4px;
+  background: var(--border);
+}
+.split-handle:hover {
+  background: var(--accent);
+}
+/* Touch screens (an iPad): a 14pt grab area with the 2pt line centred in it. */
+@media (pointer: coarse) {
+  .split-handle {
+    position: relative;
+    min-width: 14px;
+    min-height: 14px;
+    background: none;
+  }
+  .split-handle::after {
+    content: "";
+    position: absolute;
+    background: var(--border);
+  }
+  .split-handle[aria-orientation="vertical"]::after {
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    width: 2px;
+  }
+  .split-handle[aria-orientation="horizontal"]::after {
+    left: 0;
+    right: 0;
+    top: calc(50% - 1px);
+    height: 2px;
+  }
+  .split-handle:hover,
+  .split-handle[data-separator="active"] {
+    background: none;
+  }
+  .split-handle:hover::after,
+  .split-handle[data-separator="active"]::after {
+    background: var(--accent);
+  }
+}
+.pane-slot,
+.pane-home {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+/* Panes a zoom hides: their elements stay in the DOM so the sessions go on. */
+.zoom-stash {
+  display: none;
+}
+.terminal-pane {
+  position: relative;
+  /* Keeps xterm's layers and the status banner stacking among themselves, not against the app. */
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid transparent;
+}
+.terminal-pane[data-active="true"] {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* Panes that share a tab: a name header, a clear focus ring, and the others dimmed. */
+.terminal-pane[data-split="true"] {
+  border-width: 2px;
+}
+.terminal-pane[data-split="true"][data-active="true"] {
+  border-color: var(--accent);
+}
+/* Broadcasting: every pane of the tab is outlined (over the focus ring) and says where typing goes. */
+.terminal-pane[data-broadcast="true"] {
+  outline: 2px solid var(--broadcast);
+  outline-offset: -2px;
+}
+.pane-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 2px 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12px;
+  /* A touch hold opens the menu, or drags the pane: no text selection, callout or scroll under the finger. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  color: var(--muted);
+  background: var(--panel-raised);
+  border-bottom: 1px solid var(--border);
+}
+.pane-header[data-active="true"] {
+  color: var(--bg);
+  background: var(--accent);
+  font-weight: 600;
+}
+/* The pane a dragged header would swap with. */
+.terminal-pane[data-drop-target="true"] {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+.terminal-pane[data-broadcast="true"] .pane-header {
+  color: var(--bg);
+  background: var(--broadcast);
+  font-weight: 600;
+}
+.pane-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pane-broadcast {
+  flex: none;
+}
+.pane-header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+.pane-menu,
+.pane-restore {
+  display: flex;
+  align-items: center;
+  padding: 1px 6px;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+}
+.pane-menu:hover,
+.pane-restore:hover {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+/* Touch screens: the header's buttons reach 44pt. */
+@media (pointer: coarse) {
+  .pane-menu,
+  .pane-restore {
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+  }
+}
+/* The terminal and its session card, above the key bar. */
+.terminal-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.terminal-pane .terminal-host {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  /* xterm's fit reads this box's height and width as the room for rows and columns: padding outside them. */
+  box-sizing: content-box;
+  padding: 4px;
+}
+/* Phones: text clear of rounded corners and the notch, the columns' leftover width split evenly. */
+.layout-phone .terminal-pane .terminal-host {
+  padding-inline: max(8px, env(safe-area-inset-left), var(--inset-left, 0px))
+    max(8px, env(safe-area-inset-right), var(--inset-right, 0px));
+}
+.layout-phone .terminal-host .xterm {
+  display: flex;
+  justify-content: center;
+}
+/* Highlighted output (IP addresses): the decoration's text colour is the theme's; this adds the underline. */
+.xterm .term-highlight {
+  box-shadow: inset 0 -1px 0 currentColor;
+  pointer-events: none;
+}
+/* iOS: the terminal's own touch scrolling (touchScroll.ts) handles drags; no page panning or bounce under it. */
+.terminal-host[data-touch-scroll] {
+  touch-action: none;
+  overscroll-behavior: none;
+  /* A long press is the terminal's own copy/paste menu (TouchSelection.tsx), not WebKit's callout. */
+  -webkit-touch-callout: none;
+}
+/*
+ * Mid-scroll the drawn screen is shifted by part of a line (a transform on
+ * .xterm-screen): clip it to the terminal's box. `overflow: clip`, not
+ * `hidden`: no scroll container, so focusing xterm's textarea scrolls nothing.
+ */
+.terminal-host[data-touch-scroll] .xterm-scrollable-element {
+  overflow: clip;
+}
+/*
+ * iOS copy/paste (TouchSelection.tsx). The menu: one rounded strip of text
+ * buttons over the terminal, the first (Paste, Copy) in the accent colour.
+ * The handles: an accent bar along the selection's first and last cell
+ * edge, a round knob above the start and below the end; each has a 44px wide
+ * touch area reaching past the knob.
+ */
+.touch-menu {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  animation: touch-menu-in 110ms ease-out;
+}
+@keyframes touch-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.touch-menu button {
+  height: 40px;
+  min-width: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+}
+.touch-menu button:first-child {
+  color: var(--accent);
+  font-weight: 600;
+}
+.touch-menu button:active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.touch-handle {
+  position: absolute;
+  z-index: 3;
+  box-sizing: content-box;
+  width: 44px;
+  margin-left: -22px;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.touch-handle::before,
+.touch-handle::after {
+  content: "";
+  position: absolute;
+  background: var(--accent);
+}
+.touch-handle::before {
+  left: 21px;
+  width: 2px;
+  border-radius: 1px;
+}
+.touch-handle::after {
+  left: 16px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+.touch-handle[data-handle="start"] {
+  padding-top: 22px;
+  margin-top: -22px;
+}
+.touch-handle[data-handle="start"]::before {
+  top: 22px;
+  bottom: 0;
+}
+.touch-handle[data-handle="start"]::after {
+  top: 11px;
+}
+.touch-handle[data-handle="end"] {
+  padding-bottom: 22px;
+}
+.touch-handle[data-handle="end"]::before {
+  top: 0;
+  bottom: 22px;
+}
+.touch-handle[data-handle="end"]::after {
+  bottom: 11px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .touch-menu {
+    animation: none;
+  }
+}
+/*
+ * iOS key bar, directly above the software keyboard (.app is the visual
+ * viewport's height): two rows, one row, or hidden behind a pill
+ * (KeyBar.tsx). Rounded keys 44px tall with even gaps; ten keys to a row
+ * still fit a 375pt phone. ctrl/alt: tinted and outlined for one key
+ * ("once"), filled with a bar under the label while locked.
+ */
+.key-bar {
+  flex: none;
+  display: grid;
+  gap: 5px;
+  padding: 5px 4px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+.key-row {
+  display: flex;
+  gap: 4px;
+}
+/* Keys share a phone's width; on an iPad they stop at 72px, left, with the
+   bar's own controls pushed to the right end. */
+.key-bar button.key {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 72px;
+  height: 44px;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text);
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.35);
+  transition:
+    background-color 90ms ease-out,
+    transform 90ms ease-out;
+}
+.key-bar button.key[data-key="left"],
+.key-bar button.key[data-key="up"],
+.key-bar button.key[data-key="down"],
+.key-bar button.key[data-key="right"] {
+  font-size: 17px;
+}
+.key-bar button.key:active,
+.key-bar button.key[data-down] {
+  transition: none;
+  background: color-mix(in srgb, var(--text) 14%, var(--panel-raised));
+  box-shadow: none;
+  transform: translateY(1px);
+}
+.key-bar button.key[data-mod="once"] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel-raised));
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.key-bar button.key[data-mod="locked"] {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.key-bar button.key[data-mod="locked"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 14px;
+  height: 2px;
+  margin-left: -7px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.key-bar button.key:not(.key-action) + .key-action {
+  margin-left: auto;
+}
+/* The bar's own controls (size, hide keyboard): quieter than the keys. */
+.key-bar button.key-action {
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  font-size: 20px;
+}
+.key-bar button.key-action:active {
+  color: var(--text);
+  background: var(--panel-raised);
+}
+.key-bar button.key-action svg {
+  display: block;
+  margin: auto;
+}
+/* "⌄" sits low in its em box: lifted to the key's centre. */
+.key-bar button.key-hide {
+  font-size: 24px;
+  padding-bottom: 12px;
+}
+/* Hidden: a pill on the keyboard's top edge. Its touch area reaches 44px, partly over the terminal's last row. */
+.key-bar-peek {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  height: 30px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+.key-bar-show {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 112px;
+  height: 44px;
+  margin-left: -56px;
+  padding: 0 0 4px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.key-bar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+  transition: background-color 90ms ease-out;
+}
+.key-bar-show:active .key-bar-pill {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 14%, var(--panel-raised));
+}
+@media (prefers-reduced-motion: reduce) {
+  .key-bar button.key,
+  .key-bar-pill {
+    transition: none;
+  }
+  .key-bar button.key:active,
+  .key-bar button.key[data-down] {
+    transform: none;
+  }
+}
+/* With the software keyboard up the home indicator is under it: no inset below the key bar. */
+:root[data-soft-keyboard] .app {
+  padding-bottom: 0;
+}
+/* Snippets: the page and the terminal's side panel share this list. */
+.snippet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.snippet-list-head {
+  display: flex;
+  gap: 8px;
+}
+.snippet-list-head input {
+  flex: 1;
+  min-width: 0;
+}
+.snippet-list ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+.snippet-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.snippet-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 10px;
+  text-align: left;
+}
+.snippet-label {
+  font-weight: 600;
+  color: var(--text);
+}
+.snippet-command {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.snippet-menu-wrap {
+  position: relative;
+  display: flex;
+}
+
+/*
+ * The session card: dims the whole pane and sits centred in it. Over the
+ * terminal, never under it: xterm's renderer layers carry their own z-index.
+ */
+.session-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(2px);
+}
+.session-card {
+  display: grid;
+  gap: 12px;
+  width: min(320px, 100%);
+  max-height: 100%;
+  padding: 16px;
+  overflow: auto;
+  color: var(--text);
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 32px rgb(0 0 0 / 0.5);
+  animation: session-card-in 250ms ease-out;
+}
+.session-card[data-tone="failed"] {
+  border-color: var(--danger);
+}
+@keyframes session-card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+.session-card p {
+  margin: 0;
+}
+.session-host {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+.session-host-text {
+  display: grid;
+  min-width: 0;
+}
+.session-host-label {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-host-address {
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-title {
+  font-weight: 600;
+}
+.session-card[data-tone="failed"] .session-title {
+  color: var(--danger);
+}
+.session-subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.session-steps {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.session-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--muted);
+}
+.session-step-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.session-steps li[data-mark="current"] {
+  color: var(--text);
+}
+.session-steps li[data-mark="failed"] {
+  color: var(--danger);
+}
+/* One 14px box per step; the mark is drawn inside it. */
+.session-step-icon {
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+.session-step-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border-radius: 50%;
+}
+.session-steps li[data-mark="todo"] .session-step-icon::before {
+  border: 1.5px solid var(--muted);
+}
+.session-steps li[data-mark="current"] .session-step-icon::before {
+  inset: 2px;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  animation: session-spin 0.9s linear infinite;
+}
+.session-steps li[data-mark="done"] .session-step-icon::before {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.session-steps li[data-mark="done"] .session-step-icon::after {
+  content: "";
+  position: absolute;
+  left: 4.5px;
+  top: 2px;
+  width: 4px;
+  height: 7px;
+  border: solid var(--accent);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.session-steps li[data-mark="failed"] .session-step-icon::before {
+  background: var(--danger-bg);
+}
+.session-steps li[data-mark="failed"] .session-step-icon::after {
+  content: "×";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+@keyframes session-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.session-detail {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* No scale, no spin; the current step is a filled dot instead of a ring. */
+@media (prefers-reduced-motion: reduce) {
+  .session-card {
+    animation: none;
+  }
+  .session-steps li[data-mark="current"] .session-step-icon::before {
+    animation: none;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+}
+.launcher {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 12px;
+  width: min(560px, 100%);
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+.launcher-hosts {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+/* A launcher pane: the same list, inside a pane (scrolls when the pane is short). */
+.terminal-pane[data-launcher="true"] {
+  overflow: auto;
+}
+
+/* -- prompts and the quit dialog ------------------------------------------------- */
+
+.key-facts {
+  display: grid;
+  gap: 2px;
+}
+.fingerprint {
+  overflow-wrap: anywhere;
+}
+.warning {
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+.quit-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+.settings-form {
+  max-width: 420px;
+}
+
+/* -- keychain, known hosts, port forwarding ------------------------------------- */
+
+.list-section {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.item-list {
+  display: grid;
+  gap: 6px;
+}
+/* A narrow row (a phone) wraps: the text keeps the full width and the
+   status and buttons go below it, instead of squeezing the text to a sliver. */
+.item-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.item-main {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.item-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.ref-list,
+.plain-list {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+  list-style: disc;
+  overflow-wrap: anywhere;
+}
+.table-wrap {
+  overflow: auto;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th,
+.data-table td {
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.data-table th {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 12px;
+}
+.data-table td.fingerprint {
+  max-width: 28ch;
+}
+.row-fields {
+  display: flex;
+  gap: 8px;
+}
+.row-fields .grow {
+  min-width: 0;
+}
+.port-field {
+  width: 130px;
+  flex: none;
+}
+.filter-field {
+  max-width: 280px;
+}
+.fwd-status {
+  flex: none;
+  max-width: 34ch;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.fwd-status[data-state="active"] {
+  color: var(--accent);
+}
+.fwd-status[data-state="error"] {
+  color: var(--danger);
+}
+
+/* -- sftp ------------------------------------------------------------------------ */
+
+.sftp-page {
+  overflow: hidden;
+}
+.sftp-panes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1;
+  min-height: 180px;
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.pane[data-drop="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pane-head h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.path-bar {
+  display: flex;
+  gap: 6px;
+}
+.path-bar input {
+  flex: 1;
+  min-width: 0;
+}
+.pane-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pane-actions button,
+.path-bar button {
+  padding: 3px 10px;
+}
+.pane-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.file-table th,
+.file-table td {
+  padding: 3px 8px;
+  text-align: left;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.file-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-raised);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.file-table .sort-button {
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-weight: inherit;
+}
+.file-table .kind-col {
+  width: 1.5em;
+  padding-right: 0;
+  color: var(--muted);
+}
+.file-table .name-col {
+  max-width: 0;
+  width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-table .num {
+  text-align: right;
+}
+.file-table tbody tr {
+  cursor: default;
+}
+.file-table tbody tr:hover {
+  background: var(--panel-raised);
+}
+.file-table tbody tr[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.file-table tbody tr[aria-selected="true"] .kind-col {
+  color: inherit;
+}
+.file-table tbody tr[data-kind="folder"] .name-col {
+  font-weight: 600;
+}
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+.facts dt {
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+}
+.transfer-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: none;
+  max-height: 32vh;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.transfer-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.transfer-head .small {
+  flex: 1;
+}
+.transfer-list {
+  display: grid;
+  gap: 4px;
+  overflow: auto;
+}
+.transfer-item {
+  display: grid;
+  grid-template-columns: 5.5em minmax(0, 1fr) 140px minmax(0, 18em) auto;
+  align-items: center;
+  gap: 10px;
+}
+.transfer-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-dir {
+  color: var(--muted);
+  font-size: 12px;
+}
+.transfer-item progress {
+  width: 100%;
+}
+.transfer-item.nested .transfer-dir {
+  padding-left: 1.2em;
+}
+.transfer-toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+}
+.transfer-group .transfer-name {
+  font-weight: 600;
+}
+.transfer-state[data-status="failed"] {
+  color: var(--danger);
+}
+.transfer-state[data-status="done"] {
+  color: var(--accent);
+}
+.transfer-problems {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+.path {
+  overflow-wrap: anywhere;
+}
+.own-login {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+/* -- sync ---------------------------------------------------------------------- */
+
+.settings-page {
+  overflow: auto;
+}
+.sync-settings {
+  max-width: 560px;
+}
+.sync-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  align-items: baseline;
+}
+.sync-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sync-flow {
+  min-width: 0;
+}
+.sync-step {
+  display: grid;
+  gap: 12px;
+}
+.sync-actions {
+  align-items: center;
+}
+.fingerprint-value {
+  user-select: all;
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.sync-warning {
+  display: grid;
+  gap: 4px;
+}
+.notice {
+  padding: 8px 10px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 12px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+}
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.sync-dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.sync-dot-idle {
+  background: var(--success);
+}
+.sync-dot-syncing {
+  background: var(--accent);
+  animation: sync-pulse 1.2s ease-in-out infinite;
+}
+.sync-dot-offline {
+  background: var(--warning);
+}
+.sync-dot-error {
+  background: var(--danger);
+}
+@keyframes sync-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sync-dot-syncing {
+    animation: none;
+  }
+}
+
+/* -- conflicts ---------------------------------------------------------- */
+
+.conflict-badge {
+  margin-bottom: 4px;
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 600;
+}
+.conflicts-page {
+  overflow-y: auto;
+}
+.conflict-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.conflict-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.conflict-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.conflict-table {
+  table-layout: fixed;
+}
+.conflict-table th[scope="row"] {
+  width: 22%;
+  color: var(--text);
+}
+.conflict-table tr.changed > * {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+.changed-tag {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 400;
+}
+.conflict-table .cell-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.check-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.secret-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.secret-value {
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.deleted-note {
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 400;
+}
+.conflict-actions {
+  flex-wrap: wrap;
+}
+
+/* -- phone layout (iPhone; an iPad narrower than 600px) ---------------------------- */
+
+/* The top bar over a page (☰, name, ＋) or a terminal (‹ Hosts, label, ⋯). */
+.phone-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 4px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+/* Landscape with the software keyboard up leaves a few rows: the terminal's bar steps aside until it goes. */
+@media (orientation: landscape) {
+  :root[data-soft-keyboard] .phone-top[data-kind="terminal"] {
+    display: none;
+  }
+}
+.phone-top-button {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 20px;
+  background: none;
+  border: none;
+}
+.phone-back {
+  font-size: 16px;
+  color: var(--accent);
+}
+.phone-top-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.phone-top-spacer {
+  flex: none;
+  width: 44px;
+}
+.phone-top-menu {
+  position: relative;
+  flex: none;
+}
+.phone-top-menu .row-menu {
+  right: 4px;
+  min-width: 180px;
+}
+.phone-top-menu .row-menu button {
+  min-height: 44px;
+}
+
+/* The drawer: the sidebar over the page from the left, the page dimmed behind it. */
+.drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.5);
+}
+.drawer-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: min(300px, 85vw);
+  padding: max(env(safe-area-inset-top), var(--inset-top, 0px)) 0 max(env(safe-area-inset-bottom), var(--inset-bottom, 0px))
+    max(env(safe-area-inset-left), var(--inset-left, 0px));
+  background: var(--panel);
+  box-shadow: 8px 0 24px rgb(0 0 0 / 0.35);
+  animation: drawer-in 180ms ease-out;
+}
+.drawer-panel .sidebar {
+  flex: 1;
+  width: auto;
+  overflow-y: auto;
+  border-right: none;
+  transition: none;
+}
+.drawer-panel .nav-item,
+.drawer-panel .search-button {
+  min-height: 44px;
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+/* The open sessions (the drawer's Terminals): a swipe to the left uncovers Close. */
+.phone-sessions {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.phone-session {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--danger);
+}
+.phone-session-main {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  text-align: left;
+  background: var(--panel);
+  border: none;
+  border-radius: 0;
+  transition: width 160ms ease;
+}
+/* Narrowed rather than slid, so the label stays readable beside Close. */
+.phone-session[data-revealed] .phone-session-main {
+  width: calc(100% - 88px);
+}
+.phone-session-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 88px;
+  border-radius: 0;
+}
+/* A split tab's panes, under its row. */
+.phone-pane {
+  position: relative;
+  overflow: hidden;
+  margin-left: 20px;
+  border-radius: 10px;
+  background: var(--danger);
+}
+.phone-pane-main {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 12px;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: width 160ms ease;
+}
+.phone-pane[data-revealed] .phone-pane-main {
+  width: calc(100% - 88px);
+}
+.phone-pane-main[aria-current="true"] {
+  border-color: var(--accent);
+}
+.phone-session-label {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.phone-session-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+.phone-session-status[data-status="open"] {
+  color: var(--accent);
+}
+.phone-session-status[data-status="lost"],
+.phone-session-status[data-status="failed"] {
+  color: var(--danger);
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-panel {
+    animation: none;
+  }
+  .phone-session-main,
+  .phone-pane-main {
+    transition: none;
+  }
+}
+
+/* Pages: the top bar names the page; its own heading stays for screen readers. */
+.layout-phone .page {
+  padding: 12px;
+}
+.layout-phone .hosts-page {
+  padding: 12px 6px;
+}
+.layout-phone .page-head > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.layout-phone .hosts-tools {
+  justify-content: flex-start;
+  width: 100%;
+}
+.layout-phone .hosts-tools input.hosts-filter {
+  flex: 1 1 100%;
+  width: auto;
+  min-height: 44px;
+}
+/* ＋ in the top bar is New host. */
+.layout-phone .hosts-new-host {
+  display: none;
+}
+/* Cards: a tap connects; ✎ is always there (no hover on a phone) and Connect is the card itself. */
+.layout-phone .host-card-actions {
+  opacity: 1;
+  pointer-events: auto;
+  right: 4px;
+  background: none;
+}
+.layout-phone .host-card-connect {
+  display: none;
+}
+.layout-phone .host-card .host-card-main,
+.layout-phone .host-card:hover .host-card-main,
+.layout-phone .host-card:focus-within .host-card-main {
+  min-height: 56px;
+  padding-right: 52px;
+}
+.layout-phone .host-card-actions button,
+.layout-phone .folder-card-more,
+.layout-phone .crumb-more {
+  min-width: 44px;
+  min-height: 44px;
+}
+.layout-phone .folder-card-more {
+  opacity: 1;
+}
+.layout-phone button.crumb {
+  min-height: 44px;
+}
+.layout-phone .sftp-panes {
+  grid-template-columns: minmax(0, 1fr);
+  flex: none;
+}
+/* Stacked panes do not share one screen: the page scrolls and each listing keeps room of its own. */
+.layout-phone .sftp-page {
+  overflow: auto;
+}
+.layout-phone .pane-scroll {
+  flex: none;
+  height: max(240px, 45dvh);
+}
+/* The terminal fills the screen: no focus ring around the only pane. */
+.layout-phone .terminal-pane[data-active="true"] {
+  border-color: transparent;
+}
+/* Dialogs are sheets from the bottom, full width, kept above the software keyboard. */
+.layout-phone .dialog,
+.layout-phone .dialog-wide {
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(var(--app-height, 100dvh) - max(env(safe-area-inset-top), var(--inset-top, 0px)) - 8px);
+  margin: auto 0 var(--keyboard-height, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom), var(--inset-bottom, 0px));
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+}
+.layout-phone .dialog-body {
+  max-height: calc(var(--app-height, 100dvh) - max(env(safe-area-inset-top), var(--inset-top, 0px)) - 10px);
+}
+
+/* -- QR code: shown in "Add a device", scanned on iOS ------------------------------ */
+.qr-code {
+  justify-self: center;
+  width: min(100%, 240px);
+  height: auto;
+  border-radius: 6px;
+}
+.scan-qr {
+  justify-self: start;
+}
+/*
+ * While the camera is open the scanner shows it behind the web view: everything
+ * of the page but the scan prompt is hidden and the page background is clear.
+ */
+html[data-scanning],
+html[data-scanning] body,
+html[data-scanning] #root {
+  background: transparent;
+}
+html[data-scanning] body > *:not(.qr-scan),
+html[data-scanning] dialog:not(.qr-scan) {
+  visibility: hidden;
+}
+html[data-scanning] dialog::backdrop {
+  background: transparent;
+}
+/* A modal <dialog> (top layer, above a host dialog), cleared of the browser's box. */
+.qr-scan {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: calc(max(env(safe-area-inset-top), var(--inset-top, 0px)) + 24px) 24px
+    calc(max(env(safe-area-inset-bottom), var(--inset-bottom, 0px)) + 24px);
+}
+.qr-scan[open] {
+  display: flex;
+}
+.qr-scan-hint {
+  margin: 0;
+  padding: 8px 12px;
+  /* Over the camera picture: white on black whatever the theme. */
+  color: white;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius);
+}
+.qr-scan-frame {
+  width: min(70vw, 280px);
+  aspect-ratio: 1;
+  border: 3px solid white;
+  border-radius: 16px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.qr-scan button {
+  min-width: 160px;
+  min-height: 44px;
+}
+
+/* -- touch screens (iOS): nothing waits for a hover, targets reach 44pt ------------------- */
+/* Cards: the edit pencil is always shown (a tap on the card connects, so Connect goes) and the folder menu too. */
+@media (hover: none) {
+  .host-card-actions {
+    opacity: 1;
+    pointer-events: auto;
+    right: 4px;
+    background: none;
+  }
+  .host-card-connect {
+    display: none;
+  }
+  .host-card .host-card-main,
+  .host-card:hover .host-card-main,
+  .host-card:focus-within .host-card-main {
+    padding-right: 52px;
+  }
+  .folder-card-more {
+    opacity: 1;
+  }
+}
+@media (pointer: coarse) {
+  button:not(.link, .crumb),
+  select,
+  input:not([type="checkbox"], [type="radio"]) {
+    min-height: 44px;
+  }
+  .host-card-actions button,
+  .folder-card-more,
+  .crumb-more,
+  button.crumb {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .choice {
+    min-height: 44px;
+  }
+  .row-menu button {
+    min-height: 44px;
+  }
+}
+
+/* Settings → About: the notices are long; keep them scrollable and wrapped. */
+.licenses-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The update notice: over the bottom-right corner, never modal. */
+.update-notice {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+}
+.update-notice p {
+  margin: 0;
+}
+.update-notes {
+  white-space: pre-wrap;
+}

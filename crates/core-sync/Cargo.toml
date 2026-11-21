@@ -1,0 +1,63 @@
+[package]
+name = "core-sync"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Tether sync client: pinned TLS transport, events WebSocket, token store, sync engine and account flows."
+
+[features]
+default = []
+# Exposes the engine's state machine (`Engine::tick`) for deterministic tests
+# and simulations. Dev-dependencies only; must stay out of tether-app's graph.
+test-util = []
+
+[dependencies]
+core-proto = { path = "../core-proto" }
+core-model = { path = "../core-model" }
+core-api = { path = "../core-api" }
+core-store = { path = "../core-store" }
+core-crypto = { path = "../core-crypto" }
+tokio = { workspace = true }
+futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
+# aws-lc-rs (the provider russh already builds) and HTTP/1.1 only.
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "std", "tls12"] }
+tokio-tungstenite = { version = "0.29", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+webpki-roots = "0.26"
+x509-parser = { version = "0.18", default-features = false }
+sha2 = { workspace = true }
+secrecy = { workspace = true }
+zeroize = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+# The entry comes from core_api::vault::keychain_entry (per-platform store).
+keyring-core = "1.0.1"
+
+[target.'cfg(unix)'.dependencies]
+# gethostname, for the default device name.
+libc = "0.2"
+
+[dev-dependencies]
+core-sync = { path = ".", features = ["test-util"] }
+core-api = { path = "../core-api", features = ["test-util"] }
+tempfile = { workspace = true }
+# In-process server for the transport tests. Dev-only: `cargo tree -p
+# core-sync -e normal | grep tether-server` must stay empty.
+tether-server = { path = "../../server", features = ["test-util"] }
+uuid = { workspace = true }
+data-encoding = { workspace = true }
+# Test certificates for the TLS verifier tests (aws-lc-rs: no ring needed here).
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "aws_lc_rs"] }
+# A capturing log subscriber for the "no token reaches the logs" test.
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "std", "tracing-log"] }
+tracing-log = "0.2"
+# TLS for the stub server (a fake "server" with its own certificate).
+tokio-rustls = { version = "0.26", default-features = false, features = ["tls12"] }
+# Seeded RNG for the deterministic convergence simulation.
+rand_chacha = "0.9"
+# The simulation reads a record's HLC and dirty flag (no API exposes them).
+rusqlite = { workspace = true }

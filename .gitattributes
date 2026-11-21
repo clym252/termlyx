@@ -1,0 +1,3 @@
+# The SSH test key must stay byte-exact on every platform (no CRLF conversion
+# on Windows checkouts), or key parsing in the fixture tests fails.
+tests/fixtures/keys/* -text

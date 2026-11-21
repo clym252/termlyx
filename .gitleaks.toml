@@ -1,0 +1,25 @@
+title = "Termlyx gitleaks"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "committed test fixtures and upstream test data"
+paths = [
+  # Throwaway test keys and a golden vault that guard the formats.
+  '''crates/core-ssh/tests/keys/''',
+  '''tests/fixtures/keys/''',
+  '''crates/core-store/tests/golden/vault-v1\.db''',
+  # Upstream russh test data, byte-for-byte from the pristine vendor commit.
+  '''vendor/russh/src/keys/''',
+  # Upstream russh test data (a key literal in a helper's tests).
+  '''vendor/russh/src/helpers\.rs''',
+]
+
+# Bare PEM header literals in our own key-format detection (no key body);
+# only in this one file.
+[[allowlists]]
+description = "PEM header literals in core-ssh key detection"
+condition = "AND"
+paths = ['''crates/core-ssh/src/keys\.rs''']
+regexes = ['''-----BEGIN [A-Z ]*PRIVATE KEY-----"''']

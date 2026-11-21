@@ -1,0 +1,36 @@
+# Server-only workspace manifest. It is never used in place: the Dockerfile
+# and `scripts/deploy-server.sh` copy it to the root of the trimmed source tree
+# as `Cargo.toml`, because the repository's own root manifest lists
+# `apps/tauri/src-tauri` and patches `vendor/russh`, neither of which the
+# server needs (and neither of which is sent to the build host).
+#
+# Keep in sync with the root manifest: every `workspace = true` dependency the
+# two member crates use must appear in [workspace.dependencies] with the same
+# requirement, or the pruned Cargo.lock no longer matches (the deploy script
+# checks that no version changes). No [patch] section: the server does not use
+# the patched crates.
+[workspace]
+resolver = "3"
+members = ["server", "crates/core-proto"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+repository = "https://github.com/clym252/termlyx"
+
+[workspace.dependencies]
+tokio = { version = "1.54", features = ["full"] }
+secrecy = { version = "0.10", features = ["serde"] }
+thiserror = "2"
+tracing = "0.1"
+uuid = { version = "1", features = ["v7", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "zeroize"] }
+sha2 = "0.11"
+getrandom = "0.4"
+data-encoding = "2"
+tempfile = "3"
+hmac = "0.13"

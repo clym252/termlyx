@@ -1,0 +1,277 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Superseded PR runs are cancelled; every push to main runs to completion.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: "22"
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # Tauri 2 prerequisites on Debian/Ubuntu.
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      # Installs the channel and components pinned in rust-toolchain.toml.
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          # The pnpm version comes from "packageManager" in this file.
+          package_json_file: apps/tauri/package.json
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/tauri/pnpm-lock.yaml
+
+      - name: Install JS dependencies
+        run: pnpm -C apps/tauri install --frozen-lockfile
+
+      # Fixture-backed tests return early unless TETHER_SSH_FIXTURE=1.
+      - name: Rust tests (fixture tests skipped)
+        run: cargo test --workspace
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      # AcceptAll (no host-key verification) lives behind core-ssh's test-util
+      # feature, and the cheap-KDF `VaultService::open_for_tests` behind
+      # core-api's. They may reach tether-app only as dev-dependencies. `-e
+      # normal,features` skips dev edges (plain `-e features` would flag the
+      # legitimate dev-dependencies); the tree is captured first so a cargo
+      # failure fails the step instead of passing the grep.
+      - name: Guard against test-util in the app
+        shell: bash
+        run: |
+          set -euo pipefail
+          tree=$(cargo tree -p tether-app -e normal,features)
+          if grep -F 'core-ssh feature "test-util"' <<<"$tree"; then
+            echo "core-ssh/test-util must not be enabled in tether-app's normal dependencies" >&2
+            exit 1
+          fi
+          if grep -F 'core-api feature "test-util"' <<<"$tree"; then
+            echo "core-api/test-util must not be enabled in tether-app's normal dependencies" >&2
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: pnpm -C apps/tauri exec tsc
+
+      - name: Vitest
+        run: pnpm -C apps/tauri vitest run
+
+      # --no-bundle: validates the frontend build and the full Rust compile
+      # without the slow, network-dependent installer steps (dmg, msi, AppImage).
+      - name: Tauri build (debug)
+        run: pnpm -C apps/tauri tauri build --debug --no-bundle
+
+      - name: Start SSH fixture
+        if: runner.os == 'Linux'
+        run: ./tests/fixtures/up.sh
+
+      - name: Rust tests against SSH fixture
+        if: runner.os == 'Linux'
+        env:
+          TETHER_SSH_FIXTURE: "1"
+        run: cargo test --workspace
+
+      - name: Fixture logs on failure
+        if: failure() && runner.os == 'Linux'
+        run: docker compose -f tests/fixtures/docker-compose.yml logs --tail 100 sshd
+
+      - name: Stop SSH fixture
+        if: always() && runner.os == 'Linux'
+        run: ./tests/fixtures/down.sh
+
+  # Dependency policy: licenses, advisories, bans, sources (deny.toml), npm audit
+  # and the npm license allow list.
+  deps:
+    name: dependency policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Install cargo-deny (pinned, checksum verified)
+        env:
+          CARGO_DENY_VERSION: "0.22.0"
+          CARGO_DENY_SHA256: 98c56e6a408bfa5c3c60744b6015aaa6aa08f743fdeb88386d06fca035bb1786
+        run: |
+          set -euo pipefail
+          f="cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl"
+          curl -sfLO "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/${f}.tar.gz"
+          echo "${CARGO_DENY_SHA256}  ${f}.tar.gz" | sha256sum -c -
+          tar xzf "${f}.tar.gz"
+          sudo install "${f}/cargo-deny" /usr/local/bin/cargo-deny
+
+      - name: cargo-deny
+        run: cargo deny --all-features check licenses advisories bans sources
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          package_json_file: apps/tauri/package.json
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/tauri/pnpm-lock.yaml
+
+      - run: pnpm -C apps/tauri install --frozen-lockfile
+
+      - name: npm audit (production, high)
+        run: pnpm -C apps/tauri audit --prod --audit-level high
+
+      - name: npm licenses
+        run: node scripts/release/npm-licenses.mjs
+
+      - name: Install cargo-about (pinned)
+        run: cargo install --locked cargo-about --version 0.9.3 --features cli
+
+      - name: Third-party notices are up to date
+        run: scripts/notices.sh && git diff --exit-code apps/tauri/src/about/
+
+  # Workflow policy (SHA pins, read-only defaults, no PR-target trigger,
+  # secrets only in the release environment) and the release script tests.
+  workflows:
+    name: workflow policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check workflows
+        run: node scripts/release/check-workflows.mjs .github/workflows/*.yml
+
+      - name: Release script tests
+        run: node --test scripts/release/*.test.mjs
+
+  # Spike signal only: the iOS simulator build is not a merge gate yet, so a
+  # failure here must not turn the run red. Remove continue-on-error once the
+  # build has been stable on CI.
+  ios-sim:
+    name: ios simulator build (spike signal)
+    # The committed project.pbxproj is objectVersion 77, which needs Xcode 16+.
+    runs-on: macos-15
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Select newest installed Xcode
+        run: |
+          newest="$(printf '%s\n' /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$newest"
+          xcodebuild -version
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      # Not part of rust-toolchain.toml so other runners skip these downloads.
+      - name: Add iOS Rust targets
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          # The pnpm version comes from "packageManager" in this file.
+          package_json_file: apps/tauri/package.json
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/tauri/pnpm-lock.yaml
+
+      - name: Install JS dependencies
+        run: pnpm -C apps/tauri install --frozen-lockfile
+
+      # gen/apple is committed, but tauri invokes xcodegen when it syncs the project.
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Tauri iOS build (simulator, debug)
+        run: pnpm -C apps/tauri tauri ios build --target aarch64-sim --debug
+
+  # Secrets (gitleaks, full history) and personal info (private patterns).
+  scan:
+    name: secret and personal scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks (pinned, checksum verified)
+        run: |
+          v=8.30.1
+          f="gitleaks_${v}_linux_x64.tar.gz"
+          curl -sSLO "https://github.com/gitleaks/gitleaks/releases/download/v${v}/${f}"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  ${f}" | sha256sum -c -
+          tar xzf "$f" -C "$RUNNER_TEMP" gitleaks
+
+      - name: gitleaks (full history)
+        run: '"$RUNNER_TEMP/gitleaks" git . -c .gitleaks.toml --redact'
+
+      - name: scan-personal tests
+        run: scripts/scan-personal.test.sh
+
+      # Fork PRs and Dependabot runs get no secrets; skipping is allowed only
+      # there. Anywhere else an empty secret is a misconfiguration and fails.
+      - name: Personal-info scan
+        env:
+          PERSONAL_SCAN_PATTERNS: ${{ secrets.PERSONAL_SCAN_PATTERNS }}
+          NO_SECRETS: ${{ github.event.pull_request.head.repo.fork == true || github.actor == 'dependabot[bot]' }}
+        run: |
+          if [ -z "$PERSONAL_SCAN_PATTERNS" ]; then
+            if [ "$NO_SECRETS" = "true" ]; then
+              echo "::notice::personal scan skipped (no patterns)"
+              exit 0
+            fi
+            echo "::error::PERSONAL_SCAN_PATTERNS secret is not set"
+            exit 1
+          fi
+          printf '%s\n' "$PERSONAL_SCAN_PATTERNS" > "$RUNNER_TEMP/personal-patterns"
+          scripts/scan-personal.sh --patterns "$RUNNER_TEMP/personal-patterns"

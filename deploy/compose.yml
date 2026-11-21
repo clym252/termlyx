@@ -1,0 +1,12 @@
+# Termlyx server. Run `docker compose up -d`, then `docker logs termlyx` for the setup code.
+# TERMLYX_IMAGE (a local or mirrored image) and TERMLYX_PORT (host port) are optional.
+services:
+  termlyx:
+    image: ${TERMLYX_IMAGE:-ghcr.io/clym252/termlyx-server:latest}
+    container_name: termlyx
+    restart: unless-stopped
+    ports: ["${TERMLYX_PORT:-8443}:8443"]
+    volumes: [termlyx-data:/data]
+volumes:
+  termlyx-data:
+    name: termlyx-data

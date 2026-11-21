@@ -1,0 +1,7 @@
+Termlyx, Copyright 2026 Termlyx contributors. Licensed under Apache-2.0.
+
+This product includes a modified copy of russh (vendor/russh), which is
+licensed under Apache-2.0 (see vendor/russh/LICENSE.txt). Our modifications
+(an opt-in per-channel window control patch) are described in
+vendor/russh/TETHER-PATCH.md and kept as a diff in
+vendor/russh/tether-window.patch.

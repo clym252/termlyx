@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "iOS and Android only: the camera QR scanner for joining a synced vault (Scan QR code), and plain-text clipboard read/write for the terminal's Copy and Paste, and the system Back button listener (Android). Not part of desktop builds, whose binary has neither plugin (see build.rs)",
+  "windows": ["main"],
+  "platforms": ["iOS", "android"],
+  "permissions": [
+    "barcode-scanner:default",
+    "core:app:allow-register-listener",
+    "core:app:allow-remove-listener",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text"
+  ]
+}

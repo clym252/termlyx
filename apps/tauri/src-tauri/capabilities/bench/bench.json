@@ -1,0 +1,7 @@
+{
+  "$schema": "../../gen/schemas/desktop-schema.json",
+  "identifier": "bench",
+  "description": "Phase 0 throughput harness; only in builds with the `bench` cargo feature (see build.rs)",
+  "windows": ["main"],
+  "permissions": ["allow-bench-config", "allow-bench-report"]
+}

@@ -1,0 +1,58 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "apps/tauri/src-tauri", "server"]
+# Vendored dependency (see vendor/russh/TETHER-PATCH.md): not a member, so
+# its tests, benches and examples are never built by workspace commands.
+exclude = ["vendor/russh"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+repository = "https://github.com/clym252/termlyx"
+
+[workspace.dependencies]
+tokio = { version = "1.54", features = ["full"] }
+russh = "0.64"
+russh-sftp = "3.0.1"
+secrecy = { version = "0.10", features = ["serde"] }
+thiserror = "2"
+tracing = "0.1"
+bytes = "1"
+async-trait = "0.1"
+uuid = { version = "1", features = ["v7", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "zeroize"] }
+hkdf = "0.13"
+sha2 = "0.11"
+chacha20poly1305 = { version = "0.11", features = ["zeroize"] }
+hpke = { version = "0.14", default-features = false, features = ["alloc", "getrandom", "x25519", "chacha"] }
+getrandom = "0.4"
+zeroize = "1"
+data-encoding = "2"
+proptest = "1"
+# 0.39 (not 0.40): sqlx-sqlite (tether-server) needs libsqlite3-sys <0.38 and only
+# one crate in the graph may link sqlite3.
+rusqlite = { version = "0.39", features = ["bundled"] }
+tempfile = "3"
+hmac = "0.13"
+sha1 = "0.11"
+windows-sys = { version = "0.61", features = ["Win32_Networking_WinSock"] }
+# WinRT projections (Windows Hello); raw Win32 stays on windows-sys.
+windows = "0.62"
+windows-future = "0.3"
+
+# russh with an opt-in per-channel window control patch; see
+# vendor/russh/TETHER-PATCH.md.
+[patch.crates-io]
+russh = { path = "vendor/russh" }
+
+# Argon2 at opt-level 0 takes seconds per hash; the server's tests (and any
+# test deriving a master key) run it many times. Dependencies only: the
+# crates under development keep their normal debug settings.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
