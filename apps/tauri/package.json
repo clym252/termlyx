@@ -2,7 +2,7 @@
   "name": "tether-app",
   "private": true,
   "license": "Apache-2.0",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "type": "module",
   "packageManager": "pnpm@12.4.1",
   "scripts": {
