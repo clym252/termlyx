@@ -1327,15 +1327,6 @@ Apache License
 ================================================================================
 Apache License 2.0
 Used by:
-  tether-app 0.1.0
-  core-api 0.1.0
-  core-crypto 0.1.0
-  core-model 0.1.0
-  core-proto 0.1.0
-  core-ssh 0.1.0
-  core-store 0.1.0
-  core-sync 0.1.0
-  tether-server 0.1.0
   aws-lc-sys 0.46.0
   constant_time_eq 0.6.1
   dunce 1.0.5
