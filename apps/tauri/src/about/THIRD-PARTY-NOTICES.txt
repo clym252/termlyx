@@ -7220,9 +7220,9 @@ Used by:
   anstyle-query 1.1.5
   anstyle-wincon 3.0.11
   anstyle 1.0.14
-  clap 4.6.7
+  clap 4.6.8
   clap_builder 4.6.7
-  clap_derive 4.6.7
+  clap_derive 4.6.8
   clap_lex 1.1.1
   colorchoice 1.0.5
   is_terminal_polyfill 1.70.2
@@ -8861,15 +8861,19 @@ Used by:
   windows-result 0.4.1
   windows-strings 0.5.1
   windows-sys 0.45.0
+  windows-sys 0.52.0
   windows-sys 0.60.2
   windows-sys 0.61.2
   windows-targets 0.42.2
+  windows-targets 0.52.6
   windows-targets 0.53.5
   windows-threading 0.2.1
   windows-version 0.1.7
   windows 0.62.2
+  windows_x86_64_gnu 0.52.6
   windows_x86_64_gnu 0.53.1
   windows_x86_64_msvc 0.42.2
+  windows_x86_64_msvc 0.52.6
   windows_x86_64_msvc 0.53.1
 
 MIT License
@@ -9251,7 +9255,7 @@ Used by:
   simd_cesu8 1.2.0
   syn 1.0.109
   syn 2.0.119
-  syn 3.0.9
+  syn 3.0.10
   thiserror-impl 1.0.69
   thiserror-impl 2.0.21
   thiserror 1.0.69
@@ -11742,7 +11746,7 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
-@tauri-apps/api 2.12.4
+@tauri-apps/api 2.12.5
 License: Apache-2.0 OR MIT
 
 
@@ -11971,7 +11975,7 @@ PackageDownloadLocation: git+https://github.com/tauri-apps/tauri.git
 PackageDownloadLocation: git+ssh://github.com/tauri-apps/tauri.git
 Creator: Person: Daniel Thompson-Yvetot
 
-@tauri-apps/plugin-dialog 2.8.3
+@tauri-apps/plugin-dialog 2.8.4
 License: MIT OR Apache-2.0
 
 SPDXVersion: SPDX-2.1
