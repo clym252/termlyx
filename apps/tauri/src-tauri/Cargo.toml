@@ -66,7 +66,7 @@ zeroize = { workspace = true }
 # Stopping the keep-alive service without the Activity (src/android.rs). Both
 # already in the graph through Tauri/tao; same versions (ndk-context holds the
 # application context tao stores at launch).
-jni = "0.21"
+jni = "0.22"
 ndk-context = "0.1"
 
 [target.'cfg(target_os = "ios")'.dependencies]
