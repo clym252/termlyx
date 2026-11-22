@@ -75,6 +75,18 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm tauri build --target universal-apple-darwin --bundles app,dmg --config src-tauri/tauri.release.conf.json
+      # Tauri notarizes the .app only; the DMG users download is the outer
+      # container Gatekeeper checks first, so it is notarized and stapled too.
+      - name: Notarize and staple the DMG
+        env:
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          set -- target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          [ $# -eq 1 ] || { echo "expected one DMG, found $#" >&2; exit 1; }
+          xcrun notarytool submit "$1" --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$APPLE_API_KEY" \
+            --issuer "$APPLE_API_ISSUER" --wait --timeout 30m
+          xcrun stapler staple "$1"
       - name: Remove the API key
         if: always()
         run: rm -f "$RUNNER_TEMP/AuthKey.p8"
@@ -83,6 +95,9 @@ jobs:
           app=target/universal-apple-darwin/release/bundle/macos/Termlyx.app
           xcrun stapler validate "$app"
           spctl -a -vv "$app"
+          dmg=$(ls target/universal-apple-darwin/release/bundle/dmg/*.dmg)
+          xcrun stapler validate "$dmg"
+          spctl -a -vv -t open --context context:primary-signature "$dmg"
       - name: Stage files
         run: |
           b=target/universal-apple-darwin/release/bundle
