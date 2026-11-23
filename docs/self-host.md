@@ -12,8 +12,10 @@ Docker must be installed and running first. Get it from
 <https://docs.docker.com/engine/install/> (Linux),
 <https://docs.docker.com/desktop/setup/install/mac-install/> (Mac) or
 <https://docs.docker.com/desktop/setup/install/windows-install/> (Windows).
-The scripts never use `sudo` and never change your system. If something is
-missing they tell you and stop.
+You need Docker Compose v2 (the `docker compose` command; Docker Desktop and
+current Docker Engine include it). On Windows, keep Docker Desktop in its
+default Linux containers mode. The scripts never use `sudo` and never change
+your system. If something is missing they tell you and stop.
 
 **Linux or macOS.** Open a terminal and run:
 
@@ -34,7 +36,15 @@ your home folder, starts the server, waits until it is ready, and prints:
 - the address or addresses you can reach it at, such as
   `https://192.168.1.20:8443`.
 
-Keep that window open or copy both.
+Keep that window open or copy both. If it prints several addresses, use the
+one on the same network as your devices (usually `192.168...` or `10...`), not
+a Docker `172.17...` one. If it prints none, find the computer's IP address as
+in section 2, step 4.
+
+The server makes its own certificate, so a web browser opened at that address
+warns that the site is not secure. That is expected and you do not need the
+browser: the app checks the server with the setup code and then remembers its
+certificate.
 
 ### In the app
 
@@ -146,7 +156,7 @@ admin commands as that user instead:
 sudo -u termlyx TERMLYX_DATA=/var/lib/termlyx termlyx-server invite
 sudo -u termlyx TERMLYX_DATA=/var/lib/termlyx termlyx-server setup-code
 sudo -u termlyx TERMLYX_DATA=/var/lib/termlyx termlyx-server link USERNAME --url 192.168.1.20
-sudo -u termlyx TERMLYX_DATA=/var/lib/termlyx termlyx-server backup /var/lib/termlyx/backup-2026-11-19.db --with-tls
+sudo -u termlyx TERMLYX_DATA=/var/lib/termlyx termlyx-server backup /var/lib/termlyx/backup-$(date +%F).db --with-tls
 ```
 
 To restore, stop the service first, hand the backup files to `termlyx`, and
@@ -253,15 +263,16 @@ does not change the server's identity.
 **Back up** (any day, while the server runs):
 
 ```sh
-docker exec termlyx termlyx-server backup /data/backup-2026-11-19.db --with-tls
-docker cp termlyx:/data/backup-2026-11-19.db .
-docker cp termlyx:/data/backup-2026-11-19.db.tls.tar .
+docker exec termlyx termlyx-server backup /data/backup-$(date +%F).db --with-tls
+docker cp termlyx:/data/backup-$(date +%F).db .
+docker cp termlyx:/data/backup-$(date +%F).db.tls.tar .
 ```
 
-Use today's date in place of `2026-11-19`. Without `--with-tls`, skip the
-last line.
+`$(date +%F)` is today's date, for example `2026-11-19`; in PowerShell type
+the date yourself. Without `--with-tls`, skip the last line.
 
-**Restore** replaces everything with the backup. The server must be stopped.
+**Restore** replaces everything with the backup. The commands below use a
+backup from `2026-11-19`; use your file's name. The server must be stopped.
 The container's user has id 10001, so the files you copy in must be handed to
 it. Run these in the folder holding the backup files:
 
@@ -299,7 +310,12 @@ the files inside the data volume, then set the mode.
    ```sh
    docker cp cert.pem termlyx:/data/cert.pem
    docker cp key.pem termlyx:/data/key.pem
+   docker exec -u root termlyx chown 10001:10001 /data/cert.pem /data/key.pem
+   docker exec -u root termlyx chmod 600 /data/key.pem
    ```
+
+   The last two lines hand the files to the server's user (id 10001);
+   `docker cp` writes them as root.
 
 2. Add this under `termlyx:` in `compose.yml`, then run
    `docker compose up -d`:
@@ -415,5 +431,11 @@ Map another host port, for example 9443:
 
 Either way, type the address with that port in the app, for example
 `192.168.1.20:9443`.
+
+**The install script says the server did not become ready.**
+It prints the server's log. The most common cause is a port already in use
+(above). A slow first download can also take longer than the script waits:
+run `docker ps` after a minute, and if `termlyx` is `Up` and healthy, carry
+on with "In the app".
 
 To see what the server is doing: `docker logs termlyx`.

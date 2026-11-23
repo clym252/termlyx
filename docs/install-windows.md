@@ -6,7 +6,9 @@ administrator rights are needed.
 ## Install
 
 1. Open the [latest release](https://github.com/clym252/termlyx/releases/latest)
-   and download `Termlyx_<version>_x64-setup.exe`.
+   and download `Termlyx_<version>_x64-setup.exe`. If Edge says the file
+   **isn't commonly downloaded**, click **…** next to it, then **Keep**, then
+   **Show more** → **Keep anyway**.
 2. Optional: check it against `SHA256SUMS` (see "Verify your download" in
    [self-host.md](self-host.md)).
 3. Run it. The beta installer is not code-signed (a signing certificate costs

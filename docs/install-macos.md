@@ -1,7 +1,7 @@
 # Install Termlyx on macOS
 
 The Mac app is a universal build (Apple silicon and Intel). It is signed with a
-Developer ID and notarized by Apple, so it opens without a Gatekeeper warning.
+Developer ID and notarized by Apple, so Gatekeeper does not block it.
 
 ## Install
 
@@ -11,7 +11,9 @@ Developer ID and notarized by Apple, so it opens without a Gatekeeper warning.
    [self-host.md](self-host.md)).
 3. Open the DMG and drag **Termlyx** onto **Applications**.
 4. Open Termlyx from Applications. On first launch macOS says it was
-   downloaded from the internet; click **Open**.
+   downloaded from the internet; click **Open**. If macOS instead says the
+   app is damaged or can't be opened, delete it, download the DMG again and
+   check it against `SHA256SUMS`.
 5. Create your master password. It encrypts your vault and cannot be
    recovered; keep the recovery key somewhere safe.
 

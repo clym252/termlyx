@@ -11,7 +11,11 @@ Settings are `TERMLYX_*` environment variables (or `/data/server.toml`).
 Compatibility: the old `TETHER_*` names still work when the new one is unset,
 and the developer deploy script and `server/compose.yml` below still take them.
 
-## Build from source and deploy
+## Build from source and deploy (developers)
+
+This section is for working on the server. The release install in
+`docs/self-host.md` uses port 8443 and `TERMLYX_*` settings; this developer
+script keeps the old `TETHER_*` names and maps host port 443 by default.
 
 The image is built on the target host from a trimmed copy of the source. From a
 checkout of this repository (needs `ssh`, `tar` and `cargo` locally):
@@ -139,21 +143,3 @@ for `backup` and `restore` are paths inside the container when you use
 `docker exec`: write into a mounted volume. A backup holds no
 plaintext, but it does hold password verifiers and wrapped keys, so keep it
 private.
-
-## Before the public release
-
-- The GitHub owner `clym252` is written in `deploy/compose.yml`,
-  `deploy/install.sh`, `deploy/install.ps1`, `.github/workflows/release.yml`,
-  `docs/self-host.md`, `README.md`, this file and the app's `SELF_HOST_DOCS_URL`
-  (`apps/tauri/src/app/brand.ts`). Change all of them together if the owner
-  changes.
-- GHCR names must be lowercase.
-- After the first release, set the GHCR package `termlyx-server` to Public:
-  new packages start private, and `docker pull` fails for strangers until then.
-- A `v*` tag builds a **draft** release (`.github/workflows/release.yml`):
-  the image is signed with cosign (keyless) and every file is in
-  `SHA256SUMS` with a provenance attestation. The tag run pushes only
-  `termlyx-server:vX.Y.Z`; `:latest` moves to that same digest when you publish
-  the release (`.github/workflows/publish-latest.yml`), so dry runs never reach
-  users. Review the draft, then publish it without the Pre-release box:
-  `releases/latest` skips pre-releases.

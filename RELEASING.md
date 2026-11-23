@@ -134,7 +134,15 @@ Set once, check after any ownership change:
 - a tag ruleset: only the maintainer creates `v*` tags;
 - default workflow permissions read-only;
 - approval required for workflows from fork PRs;
-- the `release` environment: required reviewer, `v*` tags only.
+- the `release` environment: required reviewer, `v*` tags only;
+- the GHCR package `termlyx-server` set to Public (new packages start private,
+  and `docker pull` fails for strangers until then).
+
+The owner name `clym252` is written in `deploy/compose.yml`,
+`deploy/install.sh`, `deploy/install.ps1`, `.github/workflows/release.yml`,
+`docs/`, `README.md`, `server/README.md` and the app's `SELF_HOST_DOCS_URL`
+(`apps/tauri/src/app/brand.ts`). Change them together if the owner changes;
+GHCR names must be lowercase.
 
 ## Vendored russh: check upstream on each release
 

@@ -1,7 +1,8 @@
 # Termlyx
 
 Termlyx is a clean-room, self-hosted SSH client: a Rust core with a Tauri 2 +
-React 19 + xterm.js app for Mac and Windows, with iOS and Android builds.
+React 19 + xterm.js app for Mac and Windows. iOS and Android builds are in
+progress and not distributed yet; see [BUILDING.md](BUILDING.md).
 
 > **Beta: expect bugs; back up your vault.**
 
