@@ -34,3 +34,7 @@ apps/tauri/playwright-report/
 
 # Output of the throughput bench (TETHER_BENCH=1); local only.
 docs/spikes/
+
+# Local Claude Code settings and worktrees
+.claude/settings.local.json
+.claude/worktrees/
