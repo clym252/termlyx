@@ -5,9 +5,9 @@
 # same layout): `docker compose -f server/compose.yml build`.
 
 # ---- build -----------------------------------------------------------------
-# Same Rust version as rust-toolchain.toml. Pinned by digest (tag: rust:1.99.1-trixie);
+# Same Rust version as rust-toolchain.toml. Pinned by digest (tag: rust:1.100.0-trixie);
 # bump both together on purpose.
-FROM rust:1.99.1-trixie@sha256:8a4e90c7946b74626488b1446f712c0fe0ed1a596cbd3d871684bc9c5433ae07 AS build
+FROM rust:1.100.0-trixie@sha256:223cc32ddca8f3ee90c436dbc94b6b5f052ea7f9653c5201e9612f08ad7d21b8 AS build
 
 # Small build hosts (the target VM has 2 vCPU / 2-4 GB): two jobs, no LTO,
 # many codegen units, no symbols. Lower peak memory, slightly larger binary.
