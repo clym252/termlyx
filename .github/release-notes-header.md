@@ -1,5 +1,18 @@
 > **Beta: expect bugs; back up your vault.**
 
+**Which file do I need?**
+
+| You want | Download | Guide |
+| --- | --- | --- |
+| The Mac app | `Termlyx_<version>_universal.dmg` | [Install on macOS](https://github.com/clym252/termlyx/blob/main/docs/install-macos.md) |
+| The Windows app | `Termlyx_<version>_x64-setup.exe` | [Install on Windows](https://github.com/clym252/termlyx/blob/main/docs/install-windows.md) |
+| The sync server | nothing: run the one-line install command | [Self-host the server](https://github.com/clym252/termlyx/blob/main/docs/self-host.md) |
+
+The other files are used by the in-app updater (`latest.json`, `.tar.gz`,
+`.sig`), the install scripts (`install.sh`, `install.ps1`, `compose.yml`),
+Linux installs without Docker (`termlyx-server-*`, `termlyx-server.service`)
+and verification (`SHA256SUMS`, the SBOM).
+
 **Windows:** the installer is not code-signed yet, so SmartScreen may warn
 "Windows protected your PC". Click **More info**, then **Run anyway**.
 
