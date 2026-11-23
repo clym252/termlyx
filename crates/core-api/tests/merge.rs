@@ -85,6 +85,7 @@ impl Server {
                 report.applied += r.applied;
                 report.conflicts += r.conflicts;
                 report.skipped_unknown += r.skipped_unknown;
+                report.rejected += r.rejected;
             }
         }
         report
@@ -343,7 +344,10 @@ fn snippet_concurrent_edit_is_a_conflict_showing_its_fields() {
         .unwrap();
     w.settle();
     for dev in [&w.a, &w.b] {
-        assert_eq!(dev.vault.get::<Snippet>(s.id).unwrap().unwrap().label, "Upgrade all");
+        assert_eq!(
+            dev.vault.get::<Snippet>(s.id).unwrap().unwrap().label,
+            "Upgrade all"
+        );
         let conflicts = dev.vault.list_conflicts().unwrap();
         assert_eq!(conflicts.len(), 1);
         let c = &conflicts[0];
@@ -840,6 +844,105 @@ fn inbound_queued_while_locked_applies_on_unlock() {
     let report = w.b.vault.apply_inbound().unwrap();
     assert_eq!(report.applied, 1);
     assert!(w.b.vault.get::<Host>(h.id).unwrap().is_some());
+}
+
+/// The server replaces record `id` with a newer revision whose envelope is
+/// `envelope` (A-M1: a compromised server or a corrupted database).
+fn tamper(w: &mut World, id: Id, envelope: Vec<u8>) {
+    w.server.seq += 1;
+    let row = w.server.rows.get_mut(&id).unwrap();
+    row.seq = w.server.seq;
+    row.rev += 1;
+    row.hlc = Hlc {
+        wall_ms: now_ms() + 60_000,
+        counter: 0,
+        node: 9,
+    };
+    row.envelope = envelope;
+}
+
+#[test]
+fn remote_row_that_does_not_open_is_rejected() {
+    let mut w = world();
+    let h = host("web");
+    w.a.vault.upsert(h.clone()).unwrap();
+    w.settle();
+    let mut garbage = w.server.rows[&h.id].envelope.clone();
+    *garbage.last_mut().unwrap() ^= 1;
+    tamper(&mut w, h.id, garbage);
+
+    let report = w.server.sync(&mut w.b);
+    assert_eq!(report.rejected, 1, "{report:?}");
+    assert_eq!(report.changed, 0);
+    assert_eq!(report.conflicts, 0);
+    assert_eq!(w.b.vault.get::<Host>(h.id).unwrap().unwrap(), h);
+    assert_eq!(w.b.vault.list::<Host>().unwrap(), vec![h]);
+    assert!(
+        w.b.vault.outbox(10).unwrap().is_empty(),
+        "clean copy not pushed"
+    );
+}
+
+#[test]
+fn remote_new_record_that_does_not_open_is_not_stored() {
+    let mut w = world();
+    let h = host("web");
+    w.a.vault.upsert(h.clone()).unwrap();
+    w.settle();
+    let bad = InboundRow {
+        seq: 100,
+        id: Id::now_v7(),
+        kind: "host".into(),
+        key_version: 1,
+        hlc: w.server.rows[&h.id].hlc,
+        rev: 1,
+        deleted: false,
+        envelope: vec![1, 2, 3],
+    };
+    w.b.vault.queue_inbound(vec![bad.clone()]).unwrap();
+    let report = w.b.vault.apply_inbound().unwrap();
+    assert_eq!(report.rejected, 1, "{report:?}");
+    assert_eq!(report.applied, 0);
+    assert!(w.b.vault.get::<Host>(bad.id).unwrap().is_none());
+    // Every list of the kind still opens.
+    assert_eq!(w.b.vault.list::<Host>().unwrap(), vec![h]);
+}
+
+#[test]
+fn envelope_moved_from_another_record_is_rejected() {
+    let mut w = world();
+    let (h1, h2) = (host("one"), host("two"));
+    w.a.vault.upsert(h1.clone()).unwrap();
+    w.a.vault.upsert(h2.clone()).unwrap();
+    w.settle();
+    let moved = w.server.rows[&h2.id].envelope.clone();
+    tamper(&mut w, h1.id, moved);
+
+    let report = w.server.sync(&mut w.b);
+    assert_eq!(report.rejected, 1, "{report:?}");
+    assert_eq!(w.b.vault.get::<Host>(h1.id).unwrap().unwrap(), h1);
+}
+
+#[test]
+fn unpushed_edit_replaces_a_remote_row_that_does_not_open() {
+    let mut w = world();
+    let h = host("web");
+    w.a.vault.upsert(h.clone()).unwrap();
+    w.settle();
+    let edited = Host {
+        label: "edited".into(),
+        ..h.clone()
+    };
+    w.b.vault.upsert(edited.clone()).unwrap();
+    tamper(&mut w, h.id, vec![0; 64]);
+
+    let report = w.server.sync(&mut w.b);
+    assert_eq!(report.rejected, 1, "{report:?}");
+    assert_eq!(report.conflicts, 0);
+    assert!(w.b.vault.outbox(10).unwrap().is_empty(), "edit pushed");
+    // The server holds B's edit again, and A takes it.
+    w.server.sync(&mut w.a);
+    assert_eq!(w.a.vault.get::<Host>(h.id).unwrap().unwrap(), edited);
 }
 
 #[test]

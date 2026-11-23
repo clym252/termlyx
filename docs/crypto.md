@@ -163,6 +163,29 @@ server stores (`vault_id`, `key_version`, `kdf`, `account_public`,
 or already wrapped. `account_secret.device` and `quick_unlock.*` are
 device-local and never leave the machine.
 
+### What a dishonest server can do
+
+The routing metadata is not covered by any key, and a tombstone is an empty
+envelope. So whoever controls the sync server (or its database, or can alter
+its traffic) cannot read records, but can:
+
+- mark records deleted;
+- serve an older version of a record again (for example a known host you
+  removed), since the clock and revision are not inside the envelope;
+- withhold records or changes.
+
+It cannot replace a record with content of its own: every device opens each
+live envelope from the server before storing it, and one that does not open
+under the VaultKey (altered, garbage, or another record's envelope) is not
+stored. The local copy is kept, and an unpushed local change goes out on top
+of it. These rows are counted in the merge report and logged by record id.
+
+Run your own server where only you control it (see
+[Self-hosting](self-host.md)) and keep backups of its data
+([Backup and restore](self-host.md#7-backup-and-restore)). A later format
+version will seal tombstones and bind the clock to the envelope, so deletes
+and replays can be checked too.
+
 ## Sealed vault key (HPKE)
 
 RFC 9180 base mode. Suite: DHKEM(X25519, HKDF-SHA256) (KEM id 0x0020),

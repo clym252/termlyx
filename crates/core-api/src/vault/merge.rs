@@ -2,6 +2,9 @@
 //!
 //! For a remote row R and the local row L with the same id:
 //!
+//! 0. R is live but its envelope does not open under the vault key: rejected
+//!    (counted), nothing stored; see `Ctx::reject`. Tombstones carry no
+//!    envelope and cannot be checked (format v1, A-M1).
 //! 1. R's kind is unknown to this build: skipped (counted), nothing stored.
 //! 2. No L, or L has no unpushed change: R is taken as synced. So is R when
 //!    it carries L's own version (same HLC: our push came back).
@@ -151,7 +154,6 @@ impl Ctx<'_> {
             report.skipped_unknown += 1;
             return Ok(());
         };
-        report.applied += 1;
         let remote = RecordRow {
             id,
             vault_id: self.keys.vault_id,
@@ -167,6 +169,10 @@ impl Ctx<'_> {
             },
         };
         let store = self.store;
+        if !remote.deleted && open_row(self.keys.vault_key.expose_secret(), &remote).is_err() {
+            return self.reject(id, r.rev, report);
+        }
+        report.applied += 1;
         let (Some(local), Some(dirty)) = (store.get(&id)?, store.is_dirty(&id)?) else {
             return self.take_remote(&remote, report);
         };
@@ -233,6 +239,22 @@ impl Ctx<'_> {
                     self.take_remote(&remote, report)?;
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// Rule 0: a live remote row whose envelope does not open under the vault
+    /// key (altered, garbage, or another record's) is never stored, or it
+    /// would replace a good copy and break every list of its kind. An
+    /// unpushed local change is rebased on it, so the next push replaces it
+    /// on the server; a clean local copy is left as it is.
+    fn reject(&self, id: Id, rev: i64, report: &mut MergeReport) -> Result<(), VaultError> {
+        tracing::warn!(record = %id, "remote row does not open; not stored");
+        report.rejected += 1;
+        if let (Some(local), Some(true)) = (self.store.get(&id)?, self.store.is_dirty(&id)?)
+            && local.rev.is_none_or(|base| rev > base)
+        {
+            self.keep_local(local, rev)?;
         }
         Ok(())
     }

@@ -32,6 +32,9 @@ pub struct MergeReport {
     pub conflicts: usize,
     /// Rows of a kind this build does not know, skipped.
     pub skipped_unknown: usize,
+    /// Live rows whose envelope did not open under the vault key, not
+    /// stored (altered by the server, or corrupt).
+    pub rejected: usize,
 }
 
 impl AddAssign for MergeReport {
@@ -40,6 +43,7 @@ impl AddAssign for MergeReport {
         self.changed += o.changed;
         self.conflicts += o.conflicts;
         self.skipped_unknown += o.skipped_unknown;
+        self.rejected += o.rejected;
     }
 }
 
