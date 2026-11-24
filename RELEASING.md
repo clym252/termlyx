@@ -50,7 +50,11 @@ is one:
 
 Every signing secret lives in the GitHub environment `release` as an
 **environment secret**, not a repo secret. The environment requires the
-maintainer's approval for each run and is limited to `v*` tags. The exception
+maintainer's approval for each run and is limited to `v*` tags. The desktop
+jobs compile first with no secrets in the environment (`tauri build
+--no-bundle`, which runs the frontend build and every `build.rs`); only the
+`tauri bundle` step that signs, notarizes and writes the updater signature
+gets them. The exception
 is `PERSONAL_SCAN_PATTERNS`, a repo secret used by CI.
 
 | Credential | Secret name(s) | Lives in | Used by | Backup |

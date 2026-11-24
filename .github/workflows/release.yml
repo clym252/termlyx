@@ -57,15 +57,21 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false # release builds use no caches
       - run: pnpm -C apps/tauri install --frozen-lockfile
+      # Compile with no secrets in the environment: this step runs the frontend
+      # build (Vite and its plugins) and every build.rs and proc macro.
+      - name: Build (universal, no secrets)
+        working-directory: apps/tauri
+        run: pnpm tauri build --target universal-apple-darwin --no-bundle --config src-tauri/tauri.release.conf.json -- --locked
       - name: Write the App Store Connect API key
         env:
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
         run: |
           umask 077
           printf '%s\n' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
-      # Tauri imports the Developer ID p12 into a temporary keychain, signs with
-      # the hardened runtime, notarizes with the API key and staples.
-      - name: Build, sign and notarize (universal)
+      # Bundling only: Tauri imports the Developer ID p12 into a temporary
+      # keychain, signs with the hardened runtime, notarizes with the API key
+      # and staples, then signs the updater archive.
+      - name: Bundle, sign and notarize (universal)
         working-directory: apps/tauri
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -76,7 +82,7 @@ jobs:
           APPLE_API_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build --target universal-apple-darwin --bundles app,dmg --config src-tauri/tauri.release.conf.json -- --locked
+        run: pnpm tauri bundle --target universal-apple-darwin --bundles app,dmg --config src-tauri/tauri.release.conf.json
       # Tauri notarizes the .app only; the DMG users download is the outer
       # container Gatekeeper checks first, so it is notarized and stapled too.
       - name: Notarize and staple the DMG
@@ -132,12 +138,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false # release builds use no caches
       - run: pnpm -C apps/tauri install --frozen-lockfile
-      - name: Build NSIS installer
+      # Compile with no secrets in the environment (frontend build, build.rs, proc macros).
+      - name: Build (no secrets)
+        working-directory: apps/tauri
+        run: pnpm tauri build --no-bundle --config src-tauri/tauri.release.conf.json -- --locked
+      # Bundling only: the NSIS installer and its updater signature.
+      - name: Bundle NSIS installer
         working-directory: apps/tauri
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build --bundles nsis --config src-tauri/tauri.release.conf.json -- --locked
+        run: pnpm tauri bundle --bundles nsis --config src-tauri/tauri.release.conf.json
       - name: Stage files
         shell: bash
         run: |
