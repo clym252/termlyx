@@ -80,6 +80,14 @@ test("hero clip pauses offscreen and plays when back", async ({ page }) => {
   await expect.poll(paused).toBe(false);
 });
 
+test("walkthrough clip (preload none, no autoplay) plays once scrolled into view", async ({ page }) => {
+  await page.goto("/");
+  const clip = page.locator('video[data-clip="walkthrough"]');
+  expect(await clip.evaluate((v) => v.paused)).toBe(true);
+  await clip.scrollIntoViewIfNeeded();
+  await expect.poll(() => clip.evaluate((v) => !v.paused && v.currentTime > 0)).toBe(true);
+});
+
 test("no third-party requests", async ({ page, baseURL }) => {
   const origin = new URL(baseURL).origin;
   const foreign = [];

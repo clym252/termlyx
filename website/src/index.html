@@ -83,7 +83,14 @@
         <p class="text-muted max-w-sm text-[17px] leading-relaxed">One vault, sealed on your device, carried by a server you own. Desktop to server to phone.</p>
       </div>
 
-      <div data-clip-slot="walkthrough"></div>
+      <!-- walkthrough clip: desktop -> your server -> phone (clips/walkthrough); the step cards below caption it -->
+      <div data-clip-slot="walkthrough" class="relative mb-6 md:mb-10 aspect-video rounded-xl border border-rule bg-panel overflow-hidden shadow-[0_40px_120px_-40px_rgba(106,167,255,.25)]">
+        <video data-clip="walkthrough" muted loop playsinline preload="none" poster="/media/walkthrough.jpg" class="block w-full h-full" aria-label="A host added on the desktop syncs encrypted through your server to a phone" aria-describedby="walkthrough-clip-text">
+          <source src="/media/walkthrough.webm" type="video/webm">
+          <source src="/media/walkthrough.mp4" type="video/mp4">
+        </video>
+        <p id="walkthrough-clip-text" class="sr-only">In Termlyx on a Mac, a new host is added: label db-01, address 192.168.1.20, username admin, then Save host. The saved host becomes a sealed envelope that travels to termlyx-server, which only ever shows ciphertext, and on to a phone, where db-01 appears in the host list and a tap connects to it. Away from home, the phone reaches the server at home through a VPN such as Tailscale or WireGuard: never an open port. Termlyx for iOS and Android is coming soon.</p>
+      </div>
       <div class="relative grid grid-cols-1 md:grid-cols-3 border border-rule rounded-xl overflow-hidden">
         <div class="hidden md:block absolute left-[16%] right-[16%] top-[148px] rail"><span class="traveller absolute -top-[3px] w-[7px] h-[7px] rounded-full bg-accent shadow-[0_0_12px_#6aa7ff]"></span></div>
 
