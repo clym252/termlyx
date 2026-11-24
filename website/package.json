@@ -6,6 +6,7 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
     "test": "node --test scripts/*.test.mjs",
+    "og": "node og/render.mjs",
     "dev": "pnpm build && python3 -m http.server -d dist 8080",
     "e2e": "pnpm -C ../apps/tauri exec playwright test --config ../../website/scripts/playwright.config.mjs"
   },

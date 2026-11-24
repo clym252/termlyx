@@ -8,6 +8,8 @@ pnpm install
 pnpm build   # src/ -> dist/ (styles.css compiled and minified)
 pnpm check   # rules over dist/: no-external-assets, no-version, no-competitor, anchors, media-budget, video-attrs
 pnpm test    # self-test of the check script
+pnpm e2e     # Playwright: downloads, reduced motion, CSP violations (needs apps/tauri deps installed)
+pnpm og      # re-render src/og.png (1200x630) from og/card.html
 pnpm dev     # build, then serve dist/ on http://localhost:8080
 ```
 
@@ -17,7 +19,8 @@ pnpm dev     # build, then serve dist/ on http://localhost:8080
 
 Product clips are rendered into `clips/**/renders/` (git-ignored) and the published
 mp4/webm/jpg files are copied into `src/media/` (budgets: video 3 MiB, poster 200 KiB).
-The rendering steps are added with the clip tooling.
+Render one clip on the devvm with `website/clips/render.sh <clip>` (e.g. `hero`); it copies the
+web encodes into `src/media/`. It renders what is committed, so commit the composition first.
 
 ## Cloudflare Pages
 
@@ -25,3 +28,11 @@ The rendering steps are added with the clip tooling.
 - Build command: `pnpm install --frozen-lockfile && pnpm build`
 - Output directory: `dist`
 - Environment variable: `NODE_VERSION=22`
+
+`src/_headers` (CSP, referrer, nosniff, permissions, cache rules) is copied into `dist/` and read by Pages.
+`/media/*` is cached one day (files have no content hash); `/fonts/*` one year, immutable.
+
+## Open items
+
+- Production domain: make `og:image` absolute in both pages (see the HTML comment).
+- Privacy policy effective date: set on go-live day.

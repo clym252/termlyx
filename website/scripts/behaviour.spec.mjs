@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 // Reuses the Playwright installed in apps/tauri (website has no Playwright dependency).
 import pw from "../../apps/tauri/node_modules/@playwright/test/index.js";
 const { test, expect } = pw;
@@ -96,4 +97,25 @@ test("no third-party requests", async ({ page, baseURL }) => {
   page.on("request", (r) => { if (/^https?:/.test(r.url()) && new URL(r.url()).origin !== origin) foreign.push(r.url()); });
   await page.goto("/", { waitUntil: "networkidle" });
   expect(foreign).toEqual([]);
+});
+
+test.describe("csp", () => {
+  // Serve the pages with the exact CSP from src/_headers and fail on any violation.
+  const csp = readFileSync(new URL("../src/_headers", import.meta.url), "utf8").match(/Content-Security-Policy: (.*)/)[1];
+  for (const path of ["/", "/privacy.html"]) {
+    test(`no violations on ${path}`, async ({ page }) => {
+      await page.route("**/*", async (route) => {
+        const res = await route.fetch();
+        await route.fulfill({ response: res, headers: { ...res.headers(), "content-security-policy": csp } });
+      });
+      const problems = [];
+      page.on("console", (m) => /content security policy|refused to/i.test(m.text()) && problems.push(m.text()));
+      await page.addInitScript(() =>
+        document.addEventListener("securitypolicyviolation", (e) => console.error("Refused to: " + e.violatedDirective + " " + e.blockedURI)));
+      await page.goto(path);
+      await page.mouse.wheel(0, 20000);
+      await page.waitForTimeout(1500);
+      expect(problems).toEqual([]);
+    });
+  }
 });
