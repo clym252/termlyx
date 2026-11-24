@@ -5,8 +5,10 @@ use sqlx::SqlitePool;
 
 use crate::accounts::create_short_invite;
 
-/// The text printed at start and by `setup-code`. Print it with `println!`
-/// only: the code is a secret and must never reach the logs.
+/// The text printed at start and by `setup-code`. Print it with `println!`,
+/// never `tracing`: the code is a secret. Stdout is still kept by Docker and
+/// systemd (`docker logs`, the journal); the code works once, and the docs say
+/// to use it right away.
 pub fn banner(code: &ShortCode) -> String {
     format!(
         "Termlyx server is ready. Setup code: {code}\n\

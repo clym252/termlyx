@@ -148,6 +148,10 @@ Desktop (section 1).
    journalctl -u termlyx-server
    ```
 
+   The code stays in the journal, which members of the `adm` and
+   `systemd-journal` groups can read. It works once, so use it right away:
+   whoever uses it first owns the first account.
+
 Your data is in `/var/lib/termlyx`, owned by the `termlyx` user. The Docker
 examples below use `docker exec termlyx termlyx-server <command>`; here run
 admin commands as that user instead:

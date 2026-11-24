@@ -185,7 +185,7 @@ async fn start_inner(
 /// the server task stops on its own.
 pub async fn serve(cfg: Config) -> anyhow::Result<()> {
     let running = start(cfg).await?;
-    // println!, never tracing: the setup code is a secret.
+    // println!, never tracing: the setup code is a secret (see `setup::banner`).
     if let Some(code) = setup::ensure(&running.state.db, util::system_now_ms()).await? {
         println!("{}", setup::banner(&code));
     }
