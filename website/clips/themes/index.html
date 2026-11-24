@@ -1,0 +1,137 @@
+<!doctype html>
+<!--
+  Themes clip (8 s loop, 1920x600): one terminal session cross-fading through six themes and back to the first.
+  Colours are the terminal blocks of apps/tauri/src/themes/palettes/*.ts (see each layer's comment); names are the app's.
+  Mapping as in the hero clip: prompt = bright green bold, path = bright blue bold, text = foreground, dir = blue,
+  git ref = magenta, hash/warm = yellow. Six fades of 0.3 s every 1.333 s; the last returns to the first theme.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=600" />
+    <link rel="stylesheet" href="shared/app.css" />
+    <script src="gsap/gsap.min.js"></script>
+    <style>
+      html, body { margin: 0; background: #121418; }
+      #root { position: relative; width: 1920px; height: 600px; overflow: hidden; }
+      .layer { position: absolute; inset: 0; opacity: 0; background: var(--bg); color: var(--fg); padding: 36px 72px; box-sizing: border-box; }
+      .layer .label { font: 600 22px/28px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--mute); margin-bottom: 22px; }
+      .layer .term { font: 30px/37px var(--mono); color: var(--fg); }
+      .layer .term .p { color: var(--bgreen); font-weight: 700; }
+      .layer .term .d { color: var(--bblue); font-weight: 700; }
+      .layer .term .g { color: var(--green); }
+      .layer .term .gb { color: var(--bgreen); font-weight: 700; }
+      .layer .term .y { color: var(--yellow); }
+      .layer .term .b { color: var(--blue); }
+      .layer .term .m { color: var(--magenta); }
+      .layer .term .cur { height: 37px; width: 1ch; background: var(--cur); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="themes" data-start="0" data-duration="8" data-width="1920" data-height="600">
+      <div class="layer" id="l0" style="--bg:#121418;--fg:#e3e6eb;--cur:#9ec5ff;--green:#8fd18a;--bgreen:#aee8a8;--bblue:#9ec5ff;--blue:#6aa7ff;--magenta:#c597f0;--yellow:#e8c46a;--mute:#5c6370"><!-- tetherDark.ts -->
+        <div class="label">Termlyx Dark</div>
+<pre class="term"><span class="p">deploy@web-01</span>:<span class="d">~</span>$ systemctl status nginx
+<span class="g">●</span> nginx.service - A high performance web server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+     Active: <span class="gb">active (running)</span> since Mon 09:12:04 UTC; 1 day ago
+   Main PID: 812 (nginx)
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ ls -F
+<span class="b">app/</span>  <span class="b">logs/</span>  <span class="g">deploy.sh*</span>  notes.txt
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ git log --oneline -3
+<span class="y">a1f3c9e</span> <span class="b">(</span><span class="m">HEAD -&gt; main</span><span class="b">)</span> Retry the health check
+<span class="y">7be02d4</span> Pin nginx to 1.24
+<span class="y">3c9d815</span> Rotate the deploy keys
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ <span class="cur"></span></pre>
+      </div>
+      <div class="layer" id="l1" style="--bg:#282a36;--fg:#f8f8f2;--cur:#f8f8f2;--green:#50fa7b;--bgreen:#69ff94;--bblue:#d6acff;--blue:#bd93f9;--magenta:#ff79c6;--yellow:#f1fa8c;--mute:#6272a4"><!-- dracula.ts -->
+        <div class="label">Dracula</div>
+<pre class="term"><span class="p">deploy@web-01</span>:<span class="d">~</span>$ systemctl status nginx
+<span class="g">●</span> nginx.service - A high performance web server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+     Active: <span class="gb">active (running)</span> since Mon 09:12:04 UTC; 1 day ago
+   Main PID: 812 (nginx)
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ ls -F
+<span class="b">app/</span>  <span class="b">logs/</span>  <span class="g">deploy.sh*</span>  notes.txt
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ git log --oneline -3
+<span class="y">a1f3c9e</span> <span class="b">(</span><span class="m">HEAD -&gt; main</span><span class="b">)</span> Retry the health check
+<span class="y">7be02d4</span> Pin nginx to 1.24
+<span class="y">3c9d815</span> Rotate the deploy keys
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ <span class="cur"></span></pre>
+      </div>
+      <div class="layer" id="l2" style="--bg:#2e3440;--fg:#d8dee9;--cur:#d8dee9;--green:#a3be8c;--bgreen:#a3be8c;--bblue:#81a1c1;--blue:#81a1c1;--magenta:#b48ead;--yellow:#ebcb8b;--mute:#4c566a"><!-- nord.ts -->
+        <div class="label">Nord</div>
+<pre class="term"><span class="p">deploy@web-01</span>:<span class="d">~</span>$ systemctl status nginx
+<span class="g">●</span> nginx.service - A high performance web server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+     Active: <span class="gb">active (running)</span> since Mon 09:12:04 UTC; 1 day ago
+   Main PID: 812 (nginx)
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ ls -F
+<span class="b">app/</span>  <span class="b">logs/</span>  <span class="g">deploy.sh*</span>  notes.txt
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ git log --oneline -3
+<span class="y">a1f3c9e</span> <span class="b">(</span><span class="m">HEAD -&gt; main</span><span class="b">)</span> Retry the health check
+<span class="y">7be02d4</span> Pin nginx to 1.24
+<span class="y">3c9d815</span> Rotate the deploy keys
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ <span class="cur"></span></pre>
+      </div>
+      <div class="layer" id="l3" style="--bg:#1a1b26;--fg:#c0caf5;--cur:#c0caf5;--green:#9ece6a;--bgreen:#9fe044;--bblue:#8db0ff;--blue:#7aa2f7;--magenta:#bb9af7;--yellow:#e0af68;--mute:#414868"><!-- tokyoNight.ts -->
+        <div class="label">Tokyo Night</div>
+<pre class="term"><span class="p">deploy@web-01</span>:<span class="d">~</span>$ systemctl status nginx
+<span class="g">●</span> nginx.service - A high performance web server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+     Active: <span class="gb">active (running)</span> since Mon 09:12:04 UTC; 1 day ago
+   Main PID: 812 (nginx)
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ ls -F
+<span class="b">app/</span>  <span class="b">logs/</span>  <span class="g">deploy.sh*</span>  notes.txt
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ git log --oneline -3
+<span class="y">a1f3c9e</span> <span class="b">(</span><span class="m">HEAD -&gt; main</span><span class="b">)</span> Retry the health check
+<span class="y">7be02d4</span> Pin nginx to 1.24
+<span class="y">3c9d815</span> Rotate the deploy keys
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ <span class="cur"></span></pre>
+      </div>
+      <div class="layer" id="l4" style="--bg:#282828;--fg:#ebdbb2;--cur:#ebdbb2;--green:#98971a;--bgreen:#b8bb26;--bblue:#83a598;--blue:#458588;--magenta:#b16286;--yellow:#d79921;--mute:#928374"><!-- gruvbox.ts -->
+        <div class="label">Gruvbox Dark</div>
+<pre class="term"><span class="p">deploy@web-01</span>:<span class="d">~</span>$ systemctl status nginx
+<span class="g">●</span> nginx.service - A high performance web server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+     Active: <span class="gb">active (running)</span> since Mon 09:12:04 UTC; 1 day ago
+   Main PID: 812 (nginx)
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ ls -F
+<span class="b">app/</span>  <span class="b">logs/</span>  <span class="g">deploy.sh*</span>  notes.txt
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ git log --oneline -3
+<span class="y">a1f3c9e</span> <span class="b">(</span><span class="m">HEAD -&gt; main</span><span class="b">)</span> Retry the health check
+<span class="y">7be02d4</span> Pin nginx to 1.24
+<span class="y">3c9d815</span> Rotate the deploy keys
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ <span class="cur"></span></pre>
+      </div>
+      <div class="layer" id="l5" style="--bg:#1e1e2e;--fg:#cdd6f4;--cur:#f5e0dc;--green:#a6e3a1;--bgreen:#a6e3a1;--bblue:#89b4fa;--blue:#89b4fa;--magenta:#f5c2e7;--yellow:#f9e2af;--mute:#585b70"><!-- catppuccin.ts -->
+        <div class="label">Catppuccin Mocha</div>
+<pre class="term"><span class="p">deploy@web-01</span>:<span class="d">~</span>$ systemctl status nginx
+<span class="g">●</span> nginx.service - A high performance web server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+     Active: <span class="gb">active (running)</span> since Mon 09:12:04 UTC; 1 day ago
+   Main PID: 812 (nginx)
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ ls -F
+<span class="b">app/</span>  <span class="b">logs/</span>  <span class="g">deploy.sh*</span>  notes.txt
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ git log --oneline -3
+<span class="y">a1f3c9e</span> <span class="b">(</span><span class="m">HEAD -&gt; main</span><span class="b">)</span> Retry the health check
+<span class="y">7be02d4</span> Pin nginx to 1.24
+<span class="y">3c9d815</span> Rotate the deploy keys
+<span class="p">deploy@web-01</span>:<span class="d">~</span>$ <span class="cur"></span></pre>
+      </div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const L = 8 / 6, FADE = 0.3;
+      tl.set("#l0", { opacity: 1, zIndex: 0 }, 0);
+      for (let k = 1; k <= 6; k++) {
+        const n = k % 6, t = k * L - FADE; // fade k-1 -> n starts here and ends at k*L
+        tl.set("#l" + n, { zIndex: k }, t);
+        tl.set("#l" + n, { opacity: 0 }, t);
+        tl.to("#l" + n, { opacity: 1, duration: FADE, ease: "power1.inOut" }, t);
+      }
+      window.__timelines["themes"] = tl;
+    </script>
+  </body>
+</html>

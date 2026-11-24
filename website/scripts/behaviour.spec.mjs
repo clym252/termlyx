@@ -80,7 +80,7 @@ test("hero clip pauses offscreen and plays when back", async ({ page }) => {
   await expect.poll(paused).toBe(false);
 });
 
-for (const name of ["walkthrough", "sync"]) {
+for (const name of ["walkthrough", "sync", "themes"]) {
   test(`${name} clip (preload none, no autoplay) plays once scrolled into view`, async ({ page }) => {
     await page.goto("/");
     const clip = page.locator(`video[data-clip="${name}"]`);
