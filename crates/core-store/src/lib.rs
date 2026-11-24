@@ -96,6 +96,8 @@ impl Store {
         if check != "ok" {
             return Err(StoreError::Damaged(check));
         }
+        // Before WAL mode: SQLite gives new -wal/-shm files the main file's mode.
+        owner_only_with_side_files(path);
         // Returns the resulting mode as a row; a no-op when already WAL.
         conn.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(()))?;
         // Tombstoning clears an envelope; make SQLite overwrite the freed bytes.
@@ -139,6 +141,7 @@ impl Store {
             .to_str()
             .ok_or_else(|| StoreError::BadRow("copy target path is not valid UTF-8".to_owned()))?;
         self.conn.execute("VACUUM INTO ?1", [target])?;
+        owner_only(dest);
         Ok(())
     }
 
@@ -169,3 +172,23 @@ impl Store {
         Ok(out)
     }
 }
+
+/// The vault file, its `-wal` and `-shm` files: owner read/write only (0600)
+/// on Unix, whatever the umask. Best effort: some filesystems have no modes.
+fn owner_only_with_side_files(path: &Path) {
+    owner_only(path);
+    for suffix in ["-wal", "-shm"] {
+        let mut side = path.as_os_str().to_owned();
+        side.push(suffix);
+        owner_only(Path::new(&side));
+    }
+}
+
+#[cfg(unix)]
+fn owner_only(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+}
+
+#[cfg(not(unix))]
+fn owner_only(_path: &Path) {}

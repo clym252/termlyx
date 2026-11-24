@@ -111,6 +111,12 @@ pub fn open_vault(
     let opened = dir.and_then(|dir| {
         std::fs::create_dir_all(&dir)
             .map_err(|e| format!("could not create {}: {e}", dir.display()))?;
+        #[cfg(unix)]
+        {
+            // Owner only: the vault and its backups live here.
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
+        }
         let path = dir.join(VAULT_FILE);
         VaultService::open(Path::new(&path))
             .map(|v| v.with_gate(gate))

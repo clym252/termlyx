@@ -280,6 +280,37 @@ fn open_uses_wal_and_sets_schema_version() {
     assert_eq!(version, 2);
 }
 
+#[cfg(unix)]
+#[test]
+fn vault_files_and_copies_are_owner_only() {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+    let set = |p: &std::path::Path, m: u32| {
+        std::fs::set_permissions(p, std::fs::Permissions::from_mode(m)).unwrap()
+    };
+    let (dir, path) = temp_db();
+    let wal = path.with_extension("sqlite-wal");
+    let shm = path.with_extension("sqlite-shm");
+    let key = new_key();
+    let store = Store::open(&path).unwrap();
+    store.put(&sealed_host(&key, Id::now_v7(), "x", 1).1).unwrap();
+    for p in [&path, &wal, &shm] {
+        assert_eq!(mode(p), 0o600, "{}", p.display());
+    }
+    let copy = dir.path().join("copy.sqlite");
+    store.copy_to(&copy).unwrap();
+    assert_eq!(mode(&copy), 0o600);
+    drop(store);
+
+    // A vault written by an older version, readable by everyone, is tightened on open.
+    set(&path, 0o644);
+    let store = Store::open(&path).unwrap();
+    store.put(&sealed_host(&key, Id::now_v7(), "y", 1).1).unwrap();
+    for p in [&path, &wal, &shm] {
+        assert_eq!(mode(p), 0o600, "{}", p.display());
+    }
+}
+
 #[test]
 fn reopening_up_to_date_db_does_not_write() {
     let (_dir, path) = temp_db();
