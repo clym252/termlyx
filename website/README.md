@@ -13,6 +13,8 @@ pnpm og      # re-render src/og.png (1200x630) from og/card.html
 pnpm dev     # build, then serve dist/ on http://localhost:8080
 ```
 
+`pnpm dev` uses python's plain static server, so there are no pretty URLs: open `/privacy.html` locally (Cloudflare serves `/privacy`).
+
 `pnpm check` prints each failure as `file: rule: detail` and exits non-zero.
 
 ## Clips
@@ -27,10 +29,10 @@ web encodes into `src/media/`. It renders what is committed, so commit the compo
 - Root directory: `website`
 - Build command: `pnpm install --frozen-lockfile && pnpm build`
 - Output directory: `dist`
-- Environment variable: `NODE_VERSION=22`
+- Environment variable: `NODE_VERSION=22` and `PNPM_VERSION=12.4.1`
 
 `src/_headers` (CSP, referrer, nosniff, permissions, cache rules) is copied into `dist/` and read by Pages.
-`/media/*` is cached one day (files have no content hash); `/fonts/*` one year, immutable.
+`/media/*` is cached one day (files have no content hash), so a re-rendered clip with the same name can take up to a day to reach returning visitors; `/fonts/*` one year, immutable.
 
 ## Open items
 

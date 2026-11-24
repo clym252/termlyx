@@ -19,6 +19,7 @@
 <script src="/main.js" defer></script>
 </head>
 <body class="bg-bg text-ink font-sans antialiased">
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-accent focus:text-onaccent focus:font-semibold focus:px-4 focus:py-2 focus:rounded-lg">Skip to content</a>
 <!-- Icons: inline paths from Lucide (ISC license) and Simple Icons (CC0). The Windows glyph is hand-drawn. -->
 <div id="root" class="bg-bg text-ink font-sans antialiased min-h-screen selection:bg-accent selection:text-onaccent">
 
@@ -26,7 +27,7 @@
   <nav class="sticky top-0 z-50 bg-bg/90 backdrop-blur border-b border-rule">
     <div class="max-w-[1280px] mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
       <a id="nav-home" href="#top" class="flex items-center gap-2.5">
-        <img src="/logo.svg" alt="Termlyx" class="w-7 h-7">
+        <img src="/logo.svg" alt="" class="w-7 h-7">
         <span class="font-extrabold tracking-[0.14em] text-[15px]">TERMLYX</span>
         <span class="ml-1 font-mono text-[10px] tracking-label text-amber border border-amber/40 rounded-full px-2 py-0.5">BETA</span>
       </a>
@@ -42,10 +43,11 @@
     </div>
   </nav>
 
+  <main id="main">
   <!-- HERO -->
   <header id="top" class="relative border-b border-rule overflow-hidden">
     <div class="absolute inset-0 glow pointer-events-none"></div>
-    <div class="relative max-w-[1280px] mx-auto px-8 pt-24 pb-20">
+    <div class="relative max-w-[1280px] mx-auto px-5 md:px-8 pt-24 pb-20">
       <div class="grid lg:grid-cols-12 gap-10 items-end">
         <div class="lg:col-span-7">
           <p class="eyebrow mb-8">Open-source SSH client · Public beta</p>
@@ -71,11 +73,11 @@
 
       <!-- hero clip: the app window as it looks today (clips/hero) -->
       <div data-clip-slot="hero" class="relative mt-12 md:mt-20 aspect-video rounded-xl border border-rule bg-panel overflow-hidden shadow-[0_40px_120px_-40px_rgba(106,167,255,.25)]">
-        <video data-clip="hero" data-hero autoplay muted loop playsinline poster="/media/hero.jpg" class="block w-full h-full" aria-label="Termlyx connecting to a server, splitting the terminal and starting a port forward" aria-describedby="hero-clip-text">
+        <video tabindex="0" data-clip="hero" data-hero autoplay muted loop playsinline poster="/media/hero.jpg" class="block w-full h-full" aria-label="Termlyx connecting to a server, splitting the terminal and starting a port forward (click or press Enter to pause or play)" aria-describedby="hero-clip-text">
           <source src="/media/hero.webm" type="video/webm">
           <source src="/media/hero.mp4" type="video/mp4">
         </video>
-        <p id="hero-clip-text" class="sr-only">In the Termlyx app, the host web-01 is opened from the Hosts page and connects. systemctl status nginx shows nginx active. The terminal splits and db-01 opens on the right, where git log --oneline lists recent commits. On the Port Forwarding page, the rule forwarding local port 5432 to db-01:5432 is started and shows Active.</p>
+        <p id="hero-clip-text" class="sr-only">Click or press Enter on the clip to pause or play it. In the Termlyx app, the host web-01 is opened from the Hosts page and connects. systemctl status nginx shows nginx active. The terminal splits and db-01 opens on the right, where git log --oneline lists recent commits. On the Port Forwarding page, the rule forwarding local port 5432 to db-01:5432 is started and shows Active.</p>
       </div>
     </div>
   </header>
@@ -93,11 +95,11 @@
 
       <!-- walkthrough clip: desktop -> your server -> phone (clips/walkthrough); the step cards below caption it -->
       <div data-clip-slot="walkthrough" class="relative mb-6 md:mb-10 aspect-video rounded-xl border border-rule bg-panel overflow-hidden shadow-[0_40px_120px_-40px_rgba(106,167,255,.25)]">
-        <video data-clip="walkthrough" muted loop playsinline preload="none" poster="/media/walkthrough.jpg" class="block w-full h-full" aria-label="A host added on the desktop syncs encrypted through your server to a phone" aria-describedby="walkthrough-clip-text">
+        <video tabindex="0" data-clip="walkthrough" muted loop playsinline preload="none" poster="/media/walkthrough.jpg" class="block w-full h-full" aria-label="A host added on the desktop syncs encrypted through your server to a phone (click or press Enter to pause or play)" aria-describedby="walkthrough-clip-text">
           <source src="/media/walkthrough.webm" type="video/webm">
           <source src="/media/walkthrough.mp4" type="video/mp4">
         </video>
-        <p id="walkthrough-clip-text" class="sr-only">In Termlyx on a Mac, a new host is added: label db-01, address 192.168.1.20, username admin, then Save host. The saved host becomes a sealed envelope that travels to termlyx-server, which only ever shows ciphertext, and on to a phone, where db-01 appears in the host list and a tap connects to it. Away from home, the phone reaches the server at home through a VPN such as Tailscale or WireGuard: never an open port. Termlyx for iOS and Android is coming soon.</p>
+        <p id="walkthrough-clip-text" class="sr-only">Click or press Enter on the clip to pause or play it. In Termlyx on a Mac, a new host is added: label db-01, address 192.168.1.20, username admin, then Save host. The saved host becomes a sealed envelope that travels to termlyx-server, which only ever shows ciphertext, and on to a phone, where db-01 appears in the host list and a tap connects to it. Away from home, the phone reaches the server at home through a VPN such as Tailscale or WireGuard: never an open port. Termlyx for iOS and Android is coming soon.</p>
       </div>
       <div class="relative grid grid-cols-1 md:grid-cols-3 border border-rule rounded-xl overflow-hidden">
         <div class="hidden md:block absolute left-[16%] right-[16%] top-[148px] rail"><span class="traveller absolute -top-[3px] w-[7px] h-[7px] rounded-full bg-accent shadow-[0_0_12px_#6aa7ff]"></span></div>
@@ -237,11 +239,11 @@
       <div class="md:col-span-7">
         <!-- sync clip: db-01 edited on a Mac shows up on a Windows PC through your server (clips/sync) -->
         <div data-clip-slot="sync" class="relative aspect-video rounded-xl border border-rule bg-panel overflow-hidden shadow-[0_40px_120px_-40px_rgba(106,167,255,.25)]">
-          <video data-clip="sync" muted loop playsinline preload="none" poster="/media/sync.jpg" class="block w-full h-full" aria-label="A host edited on a MacBook syncs encrypted through your server to a Windows PC" aria-describedby="sync-clip-text">
+          <video tabindex="0" data-clip="sync" muted loop playsinline preload="none" poster="/media/sync.jpg" class="block w-full h-full" aria-label="A host edited on a MacBook syncs encrypted through your server to a Windows PC (click or press Enter to pause or play)" aria-describedby="sync-clip-text">
             <source src="/media/sync.webm" type="video/webm">
             <source src="/media/sync.mp4" type="video/mp4">
           </video>
-          <p id="sync-clip-text" class="sr-only">In Termlyx on a MacBook, the host db-01 is edited: its port changes from 22 to 2222, then Save host. The sidebar reads Syncing, then Synced. The change, sealed, travels to termlyx-server, which only ever shows ciphertext, and on to a Windows PC, where the sidebar reads Syncing and db-01 updates to admin@192.168.1.20:2222, then Synced.</p>
+          <p id="sync-clip-text" class="sr-only">Click or press Enter on the clip to pause or play it. In Termlyx on a MacBook, the host db-01 is edited: its port changes from 22 to 2222, then Save host. The sidebar reads Syncing, then Synced. The change, sealed, travels to termlyx-server, which only ever shows ciphertext, and on to a Windows PC, where the sidebar reads Syncing and db-01 updates to admin@192.168.1.20:2222, then Synced.</p>
         </div>
       </div>
     </div>
@@ -259,11 +261,11 @@
       </div>
       <!-- themes clip: one session through six palettes (clips/themes) -->
       <div data-clip-slot="themes" class="relative aspect-[1920/600] rounded-xl border border-rule bg-panel overflow-hidden">
-        <video data-clip="themes" muted loop playsinline preload="none" poster="/media/themes.jpg" class="block w-full h-full" aria-label="The same terminal session switching between Termlyx Dark, Dracula, Nord, Tokyo Night, Gruvbox and Catppuccin" aria-describedby="themes-clip-text">
+        <video tabindex="0" data-clip="themes" muted loop playsinline preload="none" poster="/media/themes.jpg" class="block w-full h-full" aria-label="The same terminal session switching between Termlyx Dark, Dracula, Nord, Tokyo Night, Gruvbox and Catppuccin (click or press Enter to pause or play)" aria-describedby="themes-clip-text">
           <source src="/media/themes.webm" type="video/webm">
           <source src="/media/themes.mp4" type="video/mp4">
         </video>
-        <p id="themes-clip-text" class="sr-only">A terminal session on web-01 (systemctl status nginx, ls, git log) cross-fades through six themes: Termlyx Dark, Dracula, Nord, Tokyo Night, Gruvbox Dark and Catppuccin Mocha, then back to Termlyx Dark. The name of each theme is shown top left.</p>
+        <p id="themes-clip-text" class="sr-only">Click or press Enter on the clip to pause or play it. A terminal session on web-01 (systemctl status nginx, ls, git log) cross-fades through six themes: Termlyx Dark, Dracula, Nord, Tokyo Night, Gruvbox Dark and Catppuccin Mocha, then back to Termlyx Dark. The name of each theme is shown top left.</p>
       </div>
       <div class="mt-6 flex flex-wrap gap-2.5 font-mono text-[12px]">
         <span class="inline-flex items-center gap-2 border border-accent/60 rounded-full pl-1.5 pr-3 py-1"><span class="flex"><i class="w-3 h-3 rounded-full bg-[#121418] border border-rule"></i><i class="w-3 h-3 rounded-full bg-[#6aa7ff] -ml-1"></i></span>Termlyx Dark</span>
@@ -345,16 +347,18 @@
       <div class="md:col-span-7">
         <div class="rounded-xl border border-rule bg-bg overflow-hidden">
           <div class="flex items-center border-b border-rule font-mono text-[12px]">
-            <span class="px-5 py-3 text-ink border-b-2 border-accent">Linux / macOS</span>
-            <span class="px-5 py-3 text-muted">Windows</span>
-            <span class="ml-auto mr-4 inline-flex items-center gap-1.5 text-muted"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>Copy</span>
+            <div role="group" aria-label="Operating system" class="flex">
+              <button type="button" data-os="unix" aria-pressed="true" class="px-5 py-3 text-ink border-b-2 border-accent">Linux / macOS</button>
+              <button type="button" data-os="win" aria-pressed="false" class="px-5 py-3 text-muted border-b-2 border-transparent">Windows</button>
+            </div>
+            <button type="button" data-copy class="ml-auto mr-4 inline-flex items-center gap-1.5 text-muted hover:text-ink"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg><span data-copy-label>Copy</span></button>
           </div>
-          <div class="p-6 font-mono text-[14px] leading-[1.8] overflow-x-auto whitespace-nowrap">
-            <p><span class="text-muted">$</span> curl -fsSL https://github.com/clym252/termlyx/releases/latest/download/install.sh | sh</p>
+          <div tabindex="0" aria-label="Install command and sample output" class="p-6 font-mono text-[14px] leading-[1.8] overflow-x-auto md:whitespace-nowrap">
+            <p class="break-all md:break-normal"><span data-glyph class="text-muted">$</span> <span data-cmd data-unix="curl -fsSL https://github.com/clym252/termlyx/releases/latest/download/install.sh | sh" data-win="irm https://github.com/clym252/termlyx/releases/latest/download/install.ps1 | iex">curl -fsSL https://github.com/clym252/termlyx/releases/latest/download/install.sh | sh</span></p>
             <p class="text-muted mt-4">Waiting for the server to start (up to 2 minutes)...</p>
             <p class="text-muted">Setup code: <span class="text-accent">printed here, paste it in the app</span></p>
             <p class="text-muted">Reach it from the Termlyx app at one of:</p>
-            <p class="text-muted">&nbsp;&nbsp;https://192.168.1.20:8443</p>
+            <p class="text-muted">&nbsp;&nbsp;https://192.168.1.30:8443</p>
           </div>
         </div>
       </div>
@@ -364,8 +368,8 @@
   <!-- FINAL CTA -->
   <section id="download" class="border-b border-rule relative overflow-hidden">
     <div class="absolute inset-0 glow pointer-events-none"></div>
-    <div class="relative max-w-[1280px] mx-auto px-8 py-16 md:py-36 text-center">
-      <img src="/logo.svg" alt="Termlyx" class="w-16 h-16 mx-auto mb-10">
+    <div class="relative max-w-[1280px] mx-auto px-5 md:px-8 py-16 md:py-36 text-center">
+      <img src="/logo.svg" alt="" class="w-16 h-16 mx-auto mb-10">
       <h2 class="font-extrabold tracking-head leading-[0.9] text-[40px] md:text-[112px] mb-10">Download the beta.</h2>
       <div data-downloads class="flex flex-wrap justify-center gap-3 mb-8">
         <a id="dl-mac-cta" href="https://github.com/clym252/termlyx/releases/latest" class="bg-accent text-onaccent font-semibold h-14 px-7 rounded-lg inline-flex items-center gap-2.5 text-[17px]"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>Download for macOS</a>
@@ -375,12 +379,14 @@
     </div>
   </section>
 
+  </main>
+
   <!-- FOOTER -->
   <footer class="bg-deep">
     <div class="max-w-[1280px] mx-auto px-5 md:px-8 pt-16 pb-10">
       <div class="grid grid-cols-1 md:grid-cols-12 gap-8 pb-14 border-b border-rule">
         <div class="md:col-span-5">
-          <div class="flex items-center gap-2.5 mb-4"><img src="/logo.svg" alt="Termlyx" class="w-7 h-7"><span class="font-extrabold tracking-[0.14em] text-[15px]">TERMLYX</span></div>
+          <div class="flex items-center gap-2.5 mb-4"><img src="/logo.svg" alt="" class="w-7 h-7"><span class="font-extrabold tracking-[0.14em] text-[15px]">TERMLYX</span></div>
           <p class="text-muted max-w-xs">An open-source SSH client with a vault you keep and a sync server you own.</p>
         </div>
         <div class="md:col-span-2"><p class="eyebrow mb-4">Product</p><div class="space-y-2.5 text-[14px] text-muted"><a id="ft-download" href="https://github.com/clym252/termlyx/releases/latest" class="block hover:text-ink">Download</a><a id="ft-releases" href="https://github.com/clym252/termlyx/releases" class="block hover:text-ink">Releases</a><a id="ft-changelog" href="https://github.com/clym252/termlyx/blob/main/CHANGELOG.md" class="block hover:text-ink">Changelog</a></div></div>

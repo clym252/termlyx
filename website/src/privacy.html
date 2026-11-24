@@ -19,13 +19,14 @@
 <script src="/main.js" defer></script>
 </head>
 <body class="bg-bg text-ink font-sans antialiased">
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-accent focus:text-onaccent focus:font-semibold focus:px-4 focus:py-2 focus:rounded-lg">Skip to content</a>
 <div id="root" class="bg-bg text-ink font-sans antialiased min-h-screen selection:bg-accent selection:text-onaccent">
 
   <!-- NAV -->
   <nav class="sticky top-0 z-50 bg-bg/90 backdrop-blur border-b border-rule">
     <div class="max-w-[1280px] mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
       <a id="nav-home" href="/" class="flex items-center gap-2.5">
-        <img src="/logo.svg" alt="Termlyx" class="w-7 h-7">
+        <img src="/logo.svg" alt="" class="w-7 h-7">
         <span class="font-extrabold tracking-[0.14em] text-[15px]">TERMLYX</span>
         <span class="ml-1 font-mono text-[10px] tracking-label text-amber border border-amber/40 rounded-full px-2 py-0.5">BETA</span>
       </a>
@@ -41,7 +42,7 @@
     </div>
   </nav>
 
-  <main class="max-w-[720px] mx-auto px-5 md:px-8 pt-20 pb-24">
+  <main id="main" class="max-w-[720px] mx-auto px-5 md:px-8 pt-20 pb-24">
     <p class="eyebrow mb-6">Privacy</p>
     <h1 class="font-extrabold tracking-head leading-[1] text-[40px] md:text-[56px]">Termlyx Privacy Policy</h1>
     <div class="mt-6 text-[16px] leading-[1.75] text-muted space-y-4">
@@ -81,7 +82,7 @@
     <div class="max-w-[1280px] mx-auto px-5 md:px-8 pt-16 pb-10">
       <div class="grid grid-cols-1 md:grid-cols-12 gap-8 pb-14 border-b border-rule">
         <div class="md:col-span-5">
-          <div class="flex items-center gap-2.5 mb-4"><img src="/logo.svg" alt="Termlyx" class="w-7 h-7"><span class="font-extrabold tracking-[0.14em] text-[15px]">TERMLYX</span></div>
+          <div class="flex items-center gap-2.5 mb-4"><img src="/logo.svg" alt="" class="w-7 h-7"><span class="font-extrabold tracking-[0.14em] text-[15px]">TERMLYX</span></div>
           <p class="text-muted max-w-xs">An open-source SSH client with a vault you keep and a sync server you own.</p>
         </div>
         <div class="md:col-span-2"><p class="eyebrow mb-4">Product</p><div class="space-y-2.5 text-[14px] text-muted"><a id="ft-download" href="https://github.com/clym252/termlyx/releases/latest" class="block hover:text-ink">Download</a><a id="ft-releases" href="https://github.com/clym252/termlyx/releases" class="block hover:text-ink">Releases</a><a id="ft-changelog" href="https://github.com/clym252/termlyx/blob/main/CHANGELOG.md" class="block hover:text-ink">Changelog</a></div></div>

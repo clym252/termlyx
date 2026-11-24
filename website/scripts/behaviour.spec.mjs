@@ -81,6 +81,34 @@ test("hero clip pauses offscreen and plays when back", async ({ page }) => {
   await expect.poll(paused).toBe(false);
 });
 
+test("clicking the hero pauses it for good; Enter and Space toggle", async ({ page }) => {
+  await page.goto("/");
+  const hero = page.locator("video[data-hero]");
+  const paused = () => hero.evaluate((v) => v.paused);
+  await expect.poll(paused).toBe(false);
+  await hero.click();
+  expect(await paused()).toBe(true);
+  await page.locator("footer").scrollIntoViewIfNeeded();
+  await hero.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(500);
+  expect(await paused()).toBe(true);
+  await hero.focus();
+  await page.keyboard.press("Enter");
+  expect(await paused()).toBe(false);
+  await page.keyboard.press("Space");
+  expect(await paused()).toBe(true);
+});
+
+test("self-host box: tabs switch the command, copy reports Copied", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Windows", exact: true }).click();
+  await expect(page.locator("[data-cmd]")).toContainText("install.ps1 | iex");
+  await page.getByRole("button", { name: "Copy" }).click();
+  await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("install.ps1 | iex");
+});
+
 for (const name of ["walkthrough", "sync", "themes"]) {
   test(`${name} clip (preload none, no autoplay) plays once scrolled into view`, async ({ page }) => {
     await page.goto("/");
@@ -102,7 +130,7 @@ test("no third-party requests", async ({ page, baseURL }) => {
 test.describe("csp", () => {
   // Serve the pages with the exact CSP from src/_headers and fail on any violation.
   const csp = readFileSync(new URL("../src/_headers", import.meta.url), "utf8").match(/Content-Security-Policy: (.*)/)[1];
-  for (const path of ["/", "/privacy.html"]) {
+  for (const path of ["/", "/privacy.html", "/404.html"]) {
     test(`no violations on ${path}`, async ({ page }) => {
       await page.route("**/*", async (route) => {
         const res = await route.fetch();
