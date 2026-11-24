@@ -1,0 +1,15 @@
+{
+  "name": "termlyx-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test scripts/*.test.mjs",
+    "dev": "pnpm build && python3 -m http.server -d dist 8080"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.5",
+    "tailwindcss": "4.3.5"
+  }
+}

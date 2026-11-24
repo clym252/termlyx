@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/geist-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+@theme {
+  --color-bg: #121418;
+  --color-panel: #191c22;
+  --color-raised: #20242c;
+  --color-rule: #2c313b;
+  --color-ink: #e3e6eb;
+  --color-muted: #8a92a0;
+  --color-accent: #6aa7ff;
+  --color-onaccent: #08111f;
+  --color-amber: #ffb020;
+  --color-ok: #4ec07a;
+  --color-deep: #0d0f12;
+  --font-sans: "Geist", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --tracking-head: -0.045em;
+  --tracking-label: 0.12em;
+}
