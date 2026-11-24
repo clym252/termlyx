@@ -59,11 +59,11 @@
                       <div class="hosts-section">
                         <h2 class="section-head">Hosts</h2>
                         <ul class="card-grid">
-                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-2-bg); color: var(--badge-2-fg)">BB</span><span class="host-card-text"><span class="host-card-label">build-box</span><span class="host-card-sub">deploy@192.168.1.40</span></span></button></div></li>
-                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-8-bg); color: var(--badge-8-fg)">D0</span><span class="host-card-text"><span class="host-card-label">db-01</span><span class="host-card-sub">admin@192.168.1.21</span></span></button></div></li>
-                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-1-bg); color: var(--badge-1-fg)">NA</span><span class="host-card-text"><span class="host-card-label">nas</span><span class="host-card-sub">admin@192.168.1.30</span></span></button></div></li>
-                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-2-bg); color: var(--badge-2-fg)">PH</span><span class="host-card-text"><span class="host-card-label">pi-hole</span><span class="host-card-sub">admin@192.168.1.2</span></span></button></div></li>
-                          <li><div class="host-card" id="card-web"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-7-bg); color: var(--badge-7-fg)">W0</span><span class="host-card-text"><span class="host-card-label">web-01</span><span class="host-card-sub">deploy@192.168.1.20</span></span></button><span class="host-card-actions"><button type="button" class="host-card-edit">✎</button><button type="button" class="host-card-connect" id="btn-connect">Connect</button></span></div></li>
+                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-7-bg); color: var(--badge-7-fg)">BB</span><span class="host-card-text"><span class="host-card-label">build-box</span><span class="host-card-sub">deploy@192.168.1.40</span></span></button></div></li>
+                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-2-bg); color: var(--badge-2-fg)">D0</span><span class="host-card-text"><span class="host-card-label">db-01</span><span class="host-card-sub">admin@192.168.1.20</span></span></button></div></li>
+                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-8-bg); color: var(--badge-8-fg)">NA</span><span class="host-card-text"><span class="host-card-label">nas</span><span class="host-card-sub">admin@192.168.1.30</span></span></button></div></li>
+                          <li><div class="host-card"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-1-bg); color: var(--badge-1-fg)">PH</span><span class="host-card-text"><span class="host-card-label">pi-hole</span><span class="host-card-sub">admin@192.168.1.2</span></span></button></div></li>
+                          <li><div class="host-card" id="card-web"><button type="button" class="host-card-main"><span class="host-badge" style="background: var(--badge-3-bg); color: var(--badge-3-fg)">W0</span><span class="host-card-text"><span class="host-card-label">web-01</span><span class="host-card-sub">deploy@192.168.1.10</span></span></button><span class="host-card-actions"><button type="button" class="host-card-edit">✎</button><button type="button" class="host-card-connect" id="btn-connect">Connect</button></span></div></li>
                         </ul>
                       </div>
                     </div>
@@ -119,7 +119,7 @@
                                 <div class="session-overlay" id="overlay" style="visibility: hidden">
                                   <div class="session-card" id="session-card">
                                     <div>
-                                      <div class="session-host"><span class="host-badge" style="background: var(--badge-7-bg); color: var(--badge-7-fg)">W0</span><span class="session-host-text"><span class="session-host-label">web-01</span><span class="session-host-address">deploy@192.168.1.20:22</span></span></div>
+                                      <div class="session-host"><span class="host-badge" style="background: var(--badge-3-bg); color: var(--badge-3-fg)">W0</span><span class="session-host-text"><span class="session-host-label">web-01</span><span class="session-host-address">deploy@192.168.1.10:22</span></span></div>
                                       <p class="session-title">Connecting…</p>
                                       <ol class="session-steps">
                                         <li data-mark="current" id="st1"><span class="session-step-icon"></span><span class="session-step-text">Reaching host</span></li>
@@ -191,21 +191,21 @@
                 <div class="search-results" id="pal-all">
                   <div><div class="search-group">Hosts</div>
                     <div class="search-item active"><span class="host-label">build-box</span><span class="host-address">192.168.1.40</span></div>
-                    <div class="search-item"><span class="host-label">db-01</span><span class="host-address">192.168.1.21</span></div>
+                    <div class="search-item"><span class="host-label">db-01</span><span class="host-address">192.168.1.20</span></div>
                     <div class="search-item"><span class="host-label">nas</span><span class="host-address">192.168.1.30</span></div>
                     <div class="search-item"><span class="host-label">pi-hole</span><span class="host-address">192.168.1.2</span></div>
-                    <div class="search-item"><span class="host-label">web-01</span><span class="host-address">192.168.1.20</span></div>
+                    <div class="search-item"><span class="host-label">web-01</span><span class="host-address">192.168.1.10</span></div>
                   </div>
                   <div><div class="search-group">Actions</div><div class="search-item"><span class="host-label">Local terminal</span></div></div>
                 </div>
                 <div class="search-results" id="pal-d" style="display: none">
                   <div><div class="search-group">Hosts</div>
                     <div class="search-item active"><span class="host-label">build-box</span><span class="host-address">192.168.1.40</span></div>
-                    <div class="search-item"><span class="host-label">db-01</span><span class="host-address">192.168.1.21</span></div>
+                    <div class="search-item"><span class="host-label">db-01</span><span class="host-address">192.168.1.20</span></div>
                   </div>
                 </div>
                 <div class="search-results" id="pal-db" style="display: none">
-                  <div><div class="search-group">Hosts</div><div class="search-item active"><span class="host-label">db-01</span><span class="host-address">192.168.1.21</span></div></div>
+                  <div><div class="search-group">Hosts</div><div class="search-item active"><span class="host-label">db-01</span><span class="host-address">192.168.1.20</span></div></div>
                 </div>
               </div>
             </div>
@@ -289,6 +289,8 @@
         css("pal-db", { display: "grid" }, key(1));
         move(1040, 560, 4.4, 0.5);
         hide("palette", 4.95);
+        // The typed letters were made visible one by one: hide them too, or they show through the hidden dialog.
+        for (let i = 0; i < 5; i++) hide(`q${i}`, 4.95);
 
         // 4.95 split: web-01 left (dimmed header), db-01 right and active.
         css("head-web", { display: "flex" }, 4.95);

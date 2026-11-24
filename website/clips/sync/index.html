@@ -56,27 +56,6 @@
         width: 46px;
         height: 30px;
       }
-      /* The renderer's headless Chrome has no mouse, so it matches (hover: none) and ui.css's touch
-         rules would pin ✎ on every card and hide Connect. These windows are desktops: undo them. */
-      @media (hover: none) {
-        #world .host-card-actions {
-          opacity: 0;
-          right: 8px;
-          background: var(--panel-raised);
-        }
-        #world .host-card-connect {
-          display: revert;
-        }
-        #world .host-card .host-card-main {
-          padding-right: 10px;
-        }
-        #world .host-card[data-hover="1"] .host-card-actions {
-          opacity: 1;
-        }
-        #world .host-card[data-hover="1"] .host-card-main {
-          padding-right: 124px;
-        }
-      }
       .focus-ring {
         outline: 2px solid var(--focus);
         outline-offset: 1px;
@@ -436,12 +415,12 @@
 
         // ---- 3. PC: Syncing…, db-01 reads again with the new port, Synced; then close on the card, held.
         status("p", "syncing", 4.5);
-        tl.to($("p-dot"), { opacity: 0.35, duration: 0.35, ease: "sine.inOut", yoyo: true, repeat: 1 }, 4.5);
+        tl.to($("p-dot"), { opacity: 0.35, duration: 0.25, ease: "sine.inOut", yoyo: true, repeat: 1 }, 4.5);
         set("p-db-sub", { textContent: "admin@192.168.1.20:2222" }, 4.85);
         const A = $("arrive");
         set(A, { x: PCARD.x - 6, y: PCARD.y - 6, width: PCARD.w + 12, height: PCARD.h + 12 }, 0);
         tl.to(A, { keyframes: [{ opacity: 1, duration: 0.12 }, { opacity: 0, duration: 0.9, ease: "power1.in" }] }, 4.82);
-        status("p", "idle", 5.25);
+        status("p", "idle", 5.0);
 
         // The Mac, off camera from here, goes back to frame 0.
         const mReset = 5.6;
@@ -452,7 +431,7 @@
         attr("btn-save", "data-hover", "0", mReset);
 
         // Back to frame 0.
-        camTo(C4, 5.35, 0.55);
+        camTo(C4, 5.45, 0.55);
         camTo(C1, 7.1, 0.85);
         // The PC, off camera now, goes back to frame 0.
         set("p-db-sub", { textContent: "admin@192.168.1.20" }, 7.95);

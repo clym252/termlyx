@@ -31,11 +31,15 @@ await page.getByRole("dialog", { name: "Your recovery key" }).getByRole("button"
 await page.getByRole("heading", { name: "Hosts", level: 1 }).waitFor();
 const ids = await page.evaluate(async () => {
   const api = window.__tetherMock;
-  const deploy = await api.upsertEntity("identity", { label: "deploy", username: "deploy", password: "pw" });
+  // The same records in the same order as the other clips' shots, so ids and badge colours
+  // match (build-box, nas, pi-hole, db-01); a snippet before web-01 gives it a colour of its own.
   const admin = await api.upsertEntity("identity", { label: "admin", username: "admin", password: "pw" });
-  const hosts = [["web-01", "192.168.1.20", deploy], ["db-01", "192.168.1.21", admin], ["nas", "192.168.1.30", admin], ["pi-hole", "192.168.1.2", admin], ["build-box", "192.168.1.40", deploy]];
+  const deploy = await api.upsertEntity("identity", { label: "deploy", username: "deploy", password: "pw" });
+  const hosts = [["build-box", "192.168.1.40", deploy], ["nas", "192.168.1.30", admin], ["pi-hole", "192.168.1.2", admin], ["db-01", "192.168.1.20", admin]];
   const ids = {};
   for (const [label, address, who] of hosts) ids[label] = (await api.upsertEntity("host", { label, address, settings: { identityId: who.id } })).id;
+  await api.upsertEntity("snippet", { label: "disk usage", text: "df -h", run: true });
+  ids["web-01"] = (await api.upsertEntity("host", { label: "web-01", address: "192.168.1.10", settings: { identityId: deploy.id } })).id;
   return ids;
 });
 const nav = page.getByRole("navigation", { name: "Main" });

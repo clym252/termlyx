@@ -1,7 +1,9 @@
 /*
  * Termlyx app styles for the website clips.
  * Section 1 is apps/tauri/src/ui.css copied verbatim at d176866 (minus its transitions and
- * keyframe animations: clips are seeked frame by frame, so motion lives in GSAP only).
+ * keyframe animations: clips are seeked frame by frame, so motion lives in GSAP only; and minus
+ * its `@media (hover: none)` card block: the renderer's headless Chrome has no mouse and would
+ * match it, but the clips show desktops; the phone's touch cards come from `.layout-phone`).
  * Section 2 is the clip frame: fonts, the macOS window title bar, terminal text.
  * Re-copy section 1 when the app's look changes; clips show the app as it is.
  */
@@ -2834,26 +2836,6 @@ html[data-scanning] dialog::backdrop {
 }
 
 /* -- touch screens (iOS): nothing waits for a hover, targets reach 44pt ------------------- */
-/* Cards: the edit pencil is always shown (a tap on the card connects, so Connect goes) and the folder menu too. */
-@media (hover: none) {
-  .host-card-actions {
-    opacity: 1;
-    pointer-events: auto;
-    right: 4px;
-    background: none;
-  }
-  .host-card-connect {
-    display: none;
-  }
-  .host-card .host-card-main,
-  .host-card:hover .host-card-main,
-  .host-card:focus-within .host-card-main {
-    padding-right: 52px;
-  }
-  .folder-card-more {
-    opacity: 1;
-  }
-}
 @media (pointer: coarse) {
   button:not(.link, .crumb),
   select,
