@@ -1,6 +1,9 @@
 // Reference shots of the app as it is today, on its browser mock (not shipped).
-// Start the app first:  VITE_TETHER_API=mock pnpm -C apps/tauri exec vite --host 127.0.0.1 --port 14299
-// Then:                 node website/clips/reference/shoot.mjs   (writes PNGs next to this file)
+// Shoot a production build: the dev server adds DEV-only items (the "Dev terminal" nav entry)
+// that release builds never show. Build outside the repo and serve it:
+//   VITE_TETHER_API=mock pnpm -C apps/tauri exec vite build --outDir "$TMPDIR/termlyx-mock" --emptyOutDir
+//   pnpm -C apps/tauri exec vite preview --outDir "$TMPDIR/termlyx-mock" --host 127.0.0.1 --port 14299
+// Then:  node website/clips/reference/shoot.mjs   (writes PNGs next to this file)
 import { fileURLToPath } from "node:url";
 import pw from "../../../apps/tauri/node_modules/@playwright/test/index.js";
 

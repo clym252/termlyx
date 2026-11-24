@@ -13,20 +13,15 @@ cd "$ROOT"
 source scripts/local-config.sh
 : "${TETHER_DEVVM_HOST:?set TETHER_DEVVM_HOST (scripts/local-config.sh)}"
 
-# Logs never name the devvm.
-host_part="${TETHER_DEVVM_HOST#*@}"
-exec > >(perl -pe "s/\Q$TETHER_DEVVM_HOST\E/devvm/g; s/\Q$host_part\E/devvm/g") 2>&1
+KEY_OPT=()
+if [[ -n "${TETHER_DEVVM_KEY:-}" && -f "$TETHER_DEVVM_KEY" ]]; then KEY_OPT=(-i "$TETHER_DEVVM_KEY"); fi
+SSH=(ssh -o BatchMode=yes -o ConnectTimeout=10 ${KEY_OPT[@]+"${KEY_OPT[@]}"})
+SCP=(scp -q -o BatchMode=yes ${KEY_OPT[@]+"${KEY_OPT[@]}"})
 
-SSH=(ssh -o BatchMode=yes -o ConnectTimeout=10 ${TETHER_DEVVM_KEY:+-i "$TETHER_DEVVM_KEY"})
-SCP=(scp -q -o BatchMode=yes ${TETHER_DEVVM_KEY:+-i "$TETHER_DEVVM_KEY"})
+render() {
+  scripts/devvm.sh sync
 
-scripts/devvm.sh sync
-
-# The devvm disk is nearly full: keep nothing there but the checkout and node_modules, even on failure.
-cleanup() { "${SSH[@]}" "$TETHER_DEVVM_HOST" "rm -rf ~/src/termlyx/website/clips/renders ~/src/termlyx/website/clips/media" || true; }
-trap cleanup EXIT
-
-"${SSH[@]}" "$TETHER_DEVVM_HOST" bash -s -- "$clip" <<'REMOTE'
+  "${SSH[@]}" "$TETHER_DEVVM_HOST" bash -s -- "$clip" <<'REMOTE'
 set -euo pipefail
 clip="$1"
 # This script arrives on stdin: the block is parsed whole, then runs with stdin closed.
@@ -46,8 +41,22 @@ ls -l media
 } </dev/null
 REMOTE
 
-mkdir -p website/src/media
-for ext in mp4 webm jpg; do
-  "${SCP[@]}" "$TETHER_DEVVM_HOST:src/termlyx/website/clips/media/$clip.$ext" "website/src/media/$clip.$ext"
-done
-ls -l website/src/media/"$clip".*
+  mkdir -p website/src/media
+  for ext in mp4 webm jpg; do
+    "${SCP[@]}" "$TETHER_DEVVM_HOST:src/termlyx/website/clips/media/$clip.$ext" "website/src/media/$clip.$ext"
+  done
+  ls -l website/src/media/"$clip".*
+}
+
+# The devvm disk is nearly full: keep nothing there but the checkout and node_modules, even on
+# failure. Set here, not in render: the pipeline runs render in a subshell that may skip its traps.
+trap '"${SSH[@]}" "$TETHER_DEVVM_HOST" "rm -rf ~/src/termlyx/website/clips/renders ~/src/termlyx/website/clips/media" 2>/dev/null || true' EXIT
+
+# Logs never name the devvm or its user. A plain pipe (not process substitution), so every
+# line is through the filter before the script exits; the exit status is render's.
+user_part="${TETHER_DEVVM_HOST%@*}"
+host_part="${TETHER_DEVVM_HOST#*@}"
+render 2>&1 | DEVVM_HOST="$TETHER_DEVVM_HOST" DEVVM_NAME="$host_part" DEVVM_USER="$user_part" perl -pe '
+  BEGIN { $| = 1 }
+  s/\Q$ENV{DEVVM_HOST}\E/devvm/g; s/\Q$ENV{DEVVM_NAME}\E/devvm/g;
+  s/\b\Q$ENV{DEVVM_USER}\E\b/user/g if $ENV{DEVVM_USER} ne $ENV{DEVVM_HOST};'
