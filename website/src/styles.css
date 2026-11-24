@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@source "./**/*.{html,js}";
+@source not "../scripts";
+@source not "../node_modules";
 
 @font-face {
   font-family: "Geist";
@@ -30,3 +33,26 @@
   --tracking-head: -0.045em;
   --tracking-label: 0.12em;
 }
+
+@layer base {
+  /* Tailwind v4 defaults borders to currentColor; the design wants the rule colour. */
+  *, ::before, ::after { border-color: var(--color-rule); }
+  html { scroll-behavior: smooth; }
+  body { background: var(--color-bg); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  body ::selection { background: var(--color-accent); color: var(--color-onaccent); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; border-radius: 6px; }
+}
+
+@layer components {
+  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); }
+  .glow { background: radial-gradient(60% 50% at 50% 40%, rgba(106,167,255,.10), transparent 70%); }
+  .dots { background-image: radial-gradient(rgba(138,146,160,.18) 1px, transparent 1px); background-size: 22px 22px; }
+  .rail { background: linear-gradient(90deg, #2c313b, #6aa7ff 50%, #2c313b); height: 1px; }
+  .traveller { animation: travel 4.5s cubic-bezier(.5,0,.5,1) infinite; }
+  .caret { animation: blink 1.1s steps(1) infinite; }
+}
+
+@keyframes travel { 0% { left: 0%; } 100% { left: 100%; } }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .traveller, .caret { animation: none; } }
+html.reduced .traveller, html.reduced .caret { animation: none; }

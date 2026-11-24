@@ -6,4 +6,4 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const at = (p) => root + p;
 rmSync(at("dist"), { recursive: true, force: true });
 cpSync(at("src"), at("dist"), { recursive: true, filter: (s) => !s.endsWith("/src/styles.css") });
-execFileSync(at("node_modules/.bin/tailwindcss"), ["-i", at("src/styles.css"), "-o", at("dist/styles.css"), "--minify"], { stdio: "inherit" });
+execFileSync(at("node_modules/.bin/tailwindcss"), ["-i", at("src/styles.css"), "-o", at("dist/styles.css"), "--minify"], { stdio: "inherit", cwd: root });
