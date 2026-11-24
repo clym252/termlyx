@@ -44,11 +44,9 @@ export function check(dist) {
       }
     }
 
-    // Text only, for the version scan; the last pass drops any "<" a nested tag left behind.
-    const text = src
-      .replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, "")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/[<>]/g, " ");
+    // Page text for the version scan (not a sanitiser: output is only regex-matched).
+    // No inline <script>/<style> to skip: the CSP in _headers forbids them.
+    const text = src.split(/<[^>]*>/).join(" ");
     for (const m of text.matchAll(/\bv\d+\.\d+\.\d+\b/g)) fail(f, "no-version", m[0]);
 
     const ids = new Set([...src.matchAll(/\sid\s*=\s*["']([^"']*)["']/gi)].map((m) => m[1]));
