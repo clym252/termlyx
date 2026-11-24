@@ -23,9 +23,9 @@ Get the latest build from the
 [releases page](https://github.com/clym252/termlyx/releases/latest).
 
 - [Install on macOS](docs/install-macos.md): universal, signed and notarized.
-- [Install on Windows](docs/install-windows.md): the beta installer is not
-  code-signed, so SmartScreen asks for one extra click.
 - Verify a download: see "Verify your download" in [docs/self-host.md](docs/self-host.md).
+- [Install on Windows](docs/install-windows.md): the beta installer is not
+  code-signed, so verify it first; SmartScreen then asks for one extra click.
 
 ## Self-host the sync server
 

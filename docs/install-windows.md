@@ -9,17 +9,23 @@ administrator rights are needed.
    and download `Termlyx_<version>_x64-setup.exe`. If Edge says the file
    **isn't commonly downloaded**, click **…** next to it, then **Keep**, then
    **Show more** → **Keep anyway**.
-2. Optional: check it against `SHA256SUMS` (see "Verify your download" in
-   [self-host.md](self-host.md)).
+2. Verify it before you run it. In PowerShell, in your Downloads folder:
+
+   ```powershell
+   Get-FileHash .\Termlyx_<version>_x64-setup.exe
+   ```
+
+   The hash must match the installer's line in `SHA256SUMS` from the same
+   release. With the [GitHub CLI](https://cli.github.com/) you can also run
+   `gh attestation verify Termlyx_<version>_x64-setup.exe --repo clym252/termlyx`
+   (see "Verify your download" in [self-host.md](self-host.md)).
 3. Run it. The beta installer is not code-signed (a signing certificate costs
    money and the project has none yet), so SmartScreen may warn **Windows
-   protected your PC**. Click **More info**, then **Run anyway**.
+   protected your PC**. It shows the same warning for a tampered copy, which is
+   why step 2 comes first. Click **More info**, then **Run anyway**.
 4. Termlyx installs to `%LOCALAPPDATA%\Termlyx` and starts.
 5. Create your master password. It encrypts your vault and cannot be
    recovered; keep the recovery key somewhere safe.
-
-The download is still verifiable: compare its SHA-256 with `SHA256SUMS` or run
-`gh attestation verify` as described in [self-host.md](self-host.md).
 
 Termlyx is a beta: expect bugs and back up your vault.
 
