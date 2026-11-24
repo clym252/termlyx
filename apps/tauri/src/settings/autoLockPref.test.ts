@@ -26,9 +26,10 @@ describe("auto-lock preference", () => {
     ]);
   });
 
-  it("defaults to never on the desktop", async () => {
-    const { getAutoLock } = await freshPref();
-    expect(getAutoLock()).toBeNull();
+  it("defaults to 30 minutes on the desktop, keeping a stored Never", async () => {
+    expect((await freshPref()).getAutoLock()).toBe(30);
+    localStorage.setItem(KEY, "never");
+    expect((await freshPref()).getAutoLock()).toBeNull();
   });
 
   it("defaults to 30 minutes on iOS, keeping a stored choice", async () => {
@@ -45,11 +46,11 @@ describe("auto-lock preference", () => {
 
   it("persists the choice across loads", async () => {
     const first = await freshPref();
-    first.setAutoLockPref(30);
-    expect(first.getAutoLock()).toBe(30);
-    expect(localStorage.getItem(KEY)).toBe("30");
+    first.setAutoLockPref(15);
+    expect(first.getAutoLock()).toBe(15);
+    expect(localStorage.getItem(KEY)).toBe("15");
     const second = await freshPref();
-    expect(second.getAutoLock()).toBe(30);
+    expect(second.getAutoLock()).toBe(15);
     second.setAutoLockPref(null);
     expect(localStorage.getItem(KEY)).toBe("never");
     const third = await freshPref();
@@ -60,14 +61,14 @@ describe("auto-lock preference", () => {
     for (const bad of ["7", "0", "-5", "soon", "", "30.5"]) {
       localStorage.setItem(KEY, bad);
       const { getAutoLock } = await freshPref();
-      expect(getAutoLock(), bad).toBeNull();
+      expect(getAutoLock(), bad).toBe(30);
     }
   });
 
   it("refuses a value that is not a choice", async () => {
     const { getAutoLock, setAutoLockPref } = await freshPref();
     setAutoLockPref(7 as never);
-    expect(getAutoLock()).toBeNull();
+    expect(getAutoLock()).toBe(30);
     expect(localStorage.getItem(KEY)).toBeNull();
   });
 

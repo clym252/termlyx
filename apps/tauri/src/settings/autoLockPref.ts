@@ -11,7 +11,6 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { IS_MOBILE } from "../platform";
 import { describeError } from "../ui/errors";
 
 export const AUTO_LOCK_CHOICES = [null, 5, 15, 30, 60] as const;
@@ -23,9 +22,9 @@ const STORAGE_KEY = "tether.auto-lock";
 /** How Never is stored. */
 const NEVER = "never";
 
-/** What a device that has never chosen gets. The one place a platform default (iOS: 30 minutes) goes. */
+/** What a device that has never chosen gets: 30 minutes on every platform. */
 function defaultAutoLock(): AutoLockMinutes {
-  return IS_MOBILE ? 30 : null;
+  return 30;
 }
 
 export function autoLockLabel(minutes: AutoLockMinutes): string {
@@ -53,7 +52,7 @@ export function parseAutoLock(raw: string | null): AutoLockMinutes | undefined {
 
 function load(): AutoLockMinutes {
   try {
-    // Not `??`: a stored Never (`null`) must not fall back to iOS's 30.
+    // Not `??`: a stored Never (`null`) must not fall back to the default.
     const stored = parseAutoLock(localStorage.getItem(STORAGE_KEY));
     return stored === undefined ? defaultAutoLock() : stored;
   } catch {
