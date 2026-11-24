@@ -7,6 +7,12 @@ services:
     restart: unless-stopped
     ports: ["${TERMLYX_PORT:-8443}:8443"]
     volumes: [termlyx-data:/data]
+    # Sandboxing: read-only image, no capabilities, only /data and /tmp writable.
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
 volumes:
   termlyx-data:
     name: termlyx-data

@@ -19,6 +19,21 @@ UMask=0077
 Environment=TERMLYX_DATA=/var/lib/termlyx
 ExecStart=/usr/local/bin/termlyx-server serve
 Restart=on-failure
+# Sandboxing: the server needs only its state directory and the network.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+MemoryMax=1G
 
 [Install]
 WantedBy=multi-user.target
