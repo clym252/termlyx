@@ -17,14 +17,18 @@ if (/Windows/i.test(ua)) {
 
 const videos = [...document.querySelectorAll("video")];
 
-// (b) Reduced motion: no autoplay, and CSS stops the rail dot.
+// (b) Reduced motion: no autoplay but controls to play by hand, and CSS stops the rail dot.
 if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
   document.documentElement.classList.add("reduced");
-  for (const v of videos) { v.removeAttribute("autoplay"); v.pause(); }
+  for (const v of videos) { v.removeAttribute("autoplay"); v.pause(); v.controls = true; }
 } else {
-  // (c) Lazy clips play only while at least 30% visible.
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) e.isIntersecting ? e.target.play().catch(() => {}) : e.target.pause();
-  }, { threshold: 0.3 });
-  for (const v of videos) if (v.getAttribute("preload") === "none") io.observe(v);
+  // (c) Clips play only while on screen: lazy ones from 30% visible, the hero (often cut by the fold) from its first pixel.
+  const watch = (list, threshold) => {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) e.isIntersecting ? e.target.play().catch(() => {}) : e.target.pause();
+    }, { threshold });
+    for (const v of list) io.observe(v);
+  };
+  watch(videos.filter((v) => !v.hasAttribute("data-hero")), 0.3);
+  watch(videos.filter((v) => v.hasAttribute("data-hero")), 0);
 }

@@ -49,10 +49,8 @@
   .dots { background-image: radial-gradient(rgba(138,146,160,.18) 1px, transparent 1px); background-size: 22px 22px; }
   .rail { background: linear-gradient(90deg, #2c313b, #6aa7ff 50%, #2c313b); height: 1px; }
   .traveller { animation: travel 4.5s cubic-bezier(.5,0,.5,1) infinite; }
-  .caret { animation: blink 1.1s steps(1) infinite; }
 }
 
 @keyframes travel { 0% { left: 0%; } 100% { left: 100%; } }
-@keyframes blink { 50% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .traveller, .caret { animation: none; } }
-html.reduced .traveller, html.reduced .caret { animation: none; }
+@media (prefers-reduced-motion: reduce) { .traveller { animation: none; } }
+html.reduced .traveller { animation: none; }

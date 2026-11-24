@@ -45,6 +45,7 @@ test.describe("reduced motion", () => {
     const videos = await page.locator("video").count();
     test.skip(videos === 0, "no videos yet");
     expect(await page.locator("video[autoplay]").count()).toBe(0);
+    expect(await page.locator("video:not([controls])").count()).toBe(0);
   });
 });
 
@@ -58,13 +59,25 @@ test.describe("mobile width", () => {
 
 test("lazy media: only the hero video loads on load", async ({ page }) => {
   const media = [];
-  page.on("request", (r) => { if (r.url().includes("/media/")) media.push(r.url()); });
+  // Posters (.jpg) load eagerly by design; only clip files count.
+  page.on("request", (r) => { if (/\/media\/[^?#]*\.(mp4|webm)(?:[?#]|$)/.test(r.url())) media.push(r.url()); });
   await page.goto("/", { waitUntil: "load" });
   test.skip((await page.locator("video").count()) === 0, "no videos yet");
   const hero = await page.locator("video[data-hero] source, video[data-hero]").evaluateAll(
     (els) => els.map((e) => e.currentSrc || e.src).filter(Boolean));
   const heroPaths = hero.map((u) => new URL(u).pathname);
   for (const u of media) expect(heroPaths).toContain(new URL(u).pathname);
+});
+
+test("hero clip pauses offscreen and plays when back", async ({ page }) => {
+  await page.goto("/");
+  const hero = page.locator("video[data-hero]");
+  const paused = () => hero.evaluate((v) => v.paused);
+  await expect.poll(paused).toBe(false);
+  await page.locator("footer").scrollIntoViewIfNeeded();
+  await expect.poll(paused).toBe(true);
+  await hero.scrollIntoViewIfNeeded();
+  await expect.poll(paused).toBe(false);
 });
 
 test("no third-party requests", async ({ page, baseURL }) => {
