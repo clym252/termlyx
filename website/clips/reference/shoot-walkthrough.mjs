@@ -35,7 +35,7 @@ const shooter = (page) => async (name, root = "body") => {
   if (process.env.DUMP) writeFileSync(`${process.env.DUMP}/${name}.html`, await page.locator(root).first().evaluate((e) => e.outerHTML));
 };
 
-// Desktop (Mac): New host -> db-01, 192.168.1.20, own login admin -> Save host.
+// Desktop (Mac): New host -> db-01, 192.168.1.20, own login admin with a password -> Save host.
 {
   const page = await browser.newPage({ viewport: { width: 1440, height: 810 }, deviceScaleFactor: 2 });
   await page.addInitScript(() => Object.defineProperty(Navigator.prototype, "platform", { get: () => "MacIntel", configurable: true }));
@@ -52,7 +52,8 @@ const shooter = (page) => async (name, root = "body") => {
   await form.getByLabel("Address", { exact: true }).fill("192.168.1.20");
   await form.getByLabel("Identity", { exact: true }).selectOption({ label: "Own username & password" });
   await form.getByLabel("Username", { exact: true }).fill("admin");
-  await form.getByLabel("Username", { exact: true }).focus();
+  await form.getByLabel("Password", { exact: true }).fill("x".repeat(10)); // saved with the own login, so the phone signs in
+  await form.getByLabel("Password", { exact: true }).focus();
   await shot("21-editor-filled", ".main");
   await form.getByRole("button", { name: "Save host" }).click();
   await shot("22-hosts-saved", ".main");

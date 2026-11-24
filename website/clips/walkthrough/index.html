@@ -2,7 +2,7 @@
 <!--
   Walkthrough clip (12 s loop): add a host once, reach it anywhere.
   1. Mac, Hosts page with the New host editor (reference/20-22): type db-01, 192.168.1.20,
-     Identity "Own username & password", Username admin, Save host.
+     Identity "Own username & password", Username admin, a password, Save host.
   2. The record collapses into a sealed envelope that travels to termlyx-server (hex only).
   3. iPhone layout (reference/23-26): db-01 appears in the host list; a tap on the card connects
      (the phone layout has no Connect button: the card is it).
@@ -313,7 +313,7 @@
                               <div class="inherited-field"><label>Identity</label><select id="sel-ident"><option id="opt-ident">Same as default (none)</option></select><p class="source muted small" id="src-ident">default</p></div>
                               <div class="own-login" id="own-login" style="display: none">
                                 <div class="field"><label>Username</label><div class="wt-in"><input id="in-user" placeholder="Your local login name" value="" /><span class="wt-typed" data-text="admin"></span></div></div>
-                                <div class="field"><label>Password</label><input placeholder="Not saved (asked when connecting)" type="password" /></div>
+                                <div class="field"><label>Password</label><input id="in-pass" placeholder="Not saved (asked when connecting)" type="password" value="" /></div>
                               </div>
                             </div>
                             <div class="inherited-field"><label>Keepalive (seconds)</label><input placeholder="30" type="number" value="" /><p class="source muted small">default</p><p class="muted small">0 turns keepalives off.</p></div>
@@ -480,7 +480,7 @@
         const move = (x, y, t, d = 0.4) => tl.to(P, { x, y, duration: d, ease: "power3.inOut" }, t);
         const click = (t) => tl.to(P, { scale: 0.86, duration: 0.06, yoyo: true, repeat: 1, ease: "power1.inOut", transformOrigin: "2px 2px" }, t);
 
-        // ---- 1. Mac: New host -> db-01, 192.168.1.20, own login admin -> Save host.
+        // ---- 1. Mac: New host -> db-01, 192.168.1.20, own login admin + password -> Save host.
         typeInto("in-label", 0.3, 0.07);
         attr("in-label", "class", "", 0.75);
         attr("in-addr", "class", "wt-focus", 0.75);
@@ -496,63 +496,69 @@
         attr("in-user", "class", "wt-focus", 1.95);
         attr("in-user", "placeholder", "", 2.05);
         typeInto("in-user", 2.05, 0.06);
-        move(SAVE.x, SAVE.y, 2.4);
-        attr("btn-save", "data-hover", "1", 2.75);
-        click(2.85);
+        // Password (Tab): the browser masks it. A typed password is saved with the own login
+        // (ownLogin.ts), so the phone later signs in without asking.
+        attr("in-user", "class", "", 2.4);
+        attr("in-pass", "class", "wt-focus", 2.4);
+        for (let i = 1; i <= 10; i++) attr("in-pass", "value", "x".repeat(i), 2.42 + (i - 1) * 0.04);
+        move(SAVE.x, SAVE.y, 2.62, 0.38);
+        attr("btn-save", "data-hover", "1", 2.98);
+        click(3.05);
         // Saved: the editor closes and db-01 joins the cards.
-        set("m-editor", { display: "none" }, 2.95);
-        attr("m-page", "class", "page hosts-page", 2.95);
-        set("m-db", { display: "grid" }, 2.95);
-        move(REST.x - 200, REST.y + 260, 3.0, 0.6);
+        set("m-editor", { display: "none" }, 3.15);
+        attr("m-page", "class", "page hosts-page", 3.15);
+        set("m-db", { display: "grid" }, 3.15);
+        move(REST.x - 200, REST.y + 260, 3.2, 0.6);
 
         // ---- 2. The record collapses into a sealed envelope and travels to the server.
         const G = $("ghost"), E = $("env");
-        set(G, { x: MCARD.x, y: MCARD.y, width: MCARD.w, height: MCARD.h, visibility: "visible", transformOrigin: "50% 50%" }, 3.05);
-        tl.to(G, { scale: 0.3, opacity: 0, duration: 0.35, ease: "power2.in" }, 3.1);
-        set(E, { x: MCARD.x + MCARD.w / 2, y: MCARD.y + MCARD.h / 2, scale: 0.4, opacity: 0, visibility: "visible" }, 3.1);
-        tl.to(E, { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(2)" }, 3.25);
-        hide(G, 3.45);
-        camTo(C2, 3.35, 1.1);
+        set(G, { x: MCARD.x, y: MCARD.y, width: MCARD.w, height: MCARD.h, visibility: "visible", transformOrigin: "50% 50%" }, 3.22);
+        tl.to(G, { scale: 0.3, opacity: 0, duration: 0.35, ease: "power2.in" }, 3.27);
+        set(E, { x: MCARD.x + MCARD.w / 2, y: MCARD.y + MCARD.h / 2, scale: 0.4, opacity: 0, visibility: "visible" }, 3.27);
+        tl.to(E, { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(2)" }, 3.4);
+        hide(G, 3.62);
+        camTo(C2, 3.5, 0.95);
         const SRV = { x: 2360, y: 405 };
-        tl.to(E, { x: SRV.x, duration: 1.0, ease: "power1.inOut" }, 3.5);
-        tl.to(E, { keyframes: [{ y: 120, duration: 0.5, ease: "sine.out" }, { y: SRV.y, duration: 0.5, ease: "sine.in" }] }, 3.5);
-        tl.to(E, { scale: 0.5, opacity: 0, duration: 0.15, ease: "power1.in" }, 4.45);
-        tl.to($("srv-flash"), { keyframes: [{ opacity: 1, duration: 0.12 }, { opacity: 0, duration: 0.45 }] }, 4.5);
+        tl.to(E, { x: SRV.x, duration: 0.8, ease: "power1.inOut" }, 3.65);
+        tl.to(E, { keyframes: [{ y: 120, duration: 0.4, ease: "sine.out" }, { y: SRV.y, duration: 0.4, ease: "sine.in" }] }, 3.65);
+        tl.to(E, { scale: 0.5, opacity: 0, duration: 0.15, ease: "power1.in" }, 4.4);
+        tl.to($("srv-flash"), { keyframes: [{ opacity: 1, duration: 0.12 }, { opacity: 0, duration: 0.45 }] }, 4.45);
 
         // ...and on to the phone.
-        set(E, { scale: 0.5, opacity: 0 }, 4.8);
-        tl.to(E, { scale: 1, opacity: 1, duration: 0.2, ease: "power2.out" }, 4.85);
-        camTo(C3, 4.9, 1.0);
-        tl.to(E, { x: PCARD.x, duration: 0.95, ease: "power1.inOut" }, 4.95);
-        tl.to(E, { keyframes: [{ y: 150, duration: 0.45, ease: "sine.out" }, { y: PCARD.y, duration: 0.5, ease: "sine.in" }] }, 4.95);
-        tl.to(E, { scale: 0.5, opacity: 0, duration: 0.15, ease: "power1.in" }, 5.85);
-        hide(E, 6.0);
+        set(E, { scale: 0.5, opacity: 0 }, 4.7);
+        tl.to(E, { scale: 1, opacity: 1, duration: 0.2, ease: "power2.out" }, 4.72);
+        camTo(C3, 4.75, 0.95);
+        tl.to(E, { x: PCARD.x, duration: 0.85, ease: "power1.inOut" }, 4.8);
+        tl.to(E, { keyframes: [{ y: 150, duration: 0.4, ease: "sine.out" }, { y: PCARD.y, duration: 0.45, ease: "sine.in" }] }, 4.8);
+        tl.to(E, { scale: 0.5, opacity: 0, duration: 0.15, ease: "power1.in" }, 5.65);
+        hide(E, 5.8);
 
-        // ---- 3. db-01 appears on the phone; a tap on the card connects.
+        // ---- 3. db-01 appears on the phone (held a second); a tap on the card connects.
         // Cards below make room (they start one card higher, over db-01's empty slot).
         const AFTER = document.querySelectorAll(".p-after"), SLOT = PCARD.h + 8;
         tl.set(AFTER, { y: -SLOT }, 0);
-        tl.to(AFTER, { y: 0, duration: 0.3, ease: "power2.out" }, 5.85);
-        tl.fromTo($("p-db"), { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out", immediateRender: false }, 5.9);
+        tl.to(AFTER, { y: 0, duration: 0.3, ease: "power2.out" }, 5.65);
+        tl.fromTo($("p-db"), { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out", immediateRender: false }, 5.7);
         const T = $("tap");
-        set(T, { x: TAP.x, y: TAP.y, scale: 0.6, opacity: 0 }, 6.3);
-        tl.to(T, { keyframes: [{ scale: 0.8, opacity: 1, duration: 0.1 }, { scale: 1.3, opacity: 0, duration: 0.3 }] }, 6.4);
-        set("p-hosts", { autoAlpha: 0 }, 6.55);
-        set("p-term", { autoAlpha: 1 }, 6.55);
-        tl.fromTo($("p-card"), { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.25, ease: "power2.out", immediateRender: false }, 6.55);
+        set(T, { x: TAP.x, y: TAP.y, scale: 0.6, opacity: 0 }, 6.9);
+        tl.to(T, { keyframes: [{ scale: 0.8, opacity: 1, duration: 0.1 }, { scale: 1.3, opacity: 0, duration: 0.3 }] }, 7.0);
+        set("p-hosts", { autoAlpha: 0 }, 7.15);
+        set("p-term", { autoAlpha: 1 }, 7.15);
+        tl.fromTo($("p-card"), { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.25, ease: "power2.out", immediateRender: false }, 7.15);
         ["st1", "st2", "st3", "st4"].forEach((s, i, a) => {
-          const t = 6.8 + i * 0.15;
+          const t = 7.5 + i * 0.25;
           attr(s, "data-mark", "done", t);
           if (a[i + 1]) attr(a[i + 1], "data-mark", "current", t);
         });
-        tl.to($("p-overlay"), { autoAlpha: 0, duration: 0.15, ease: "power1.in" }, 7.4);
-        show("p-out", 7.55);
+        tl.to($("p-overlay"), { autoAlpha: 0, duration: 0.15, ease: "power1.in" }, 8.45);
+        show("p-out", 8.6);
 
         // The Mac, off camera from here, goes back to frame 0.
         const mReset = 7.6;
         for (const id of ["in-label", "in-addr", "in-user"]) chars(id).forEach((c) => hide(c, mReset));
         attr("in-label", "class", "wt-focus", mReset);
-        attr("in-user", "class", "", mReset);
+        attr("in-pass", "class", "", mReset);
+        attr("in-pass", "value", "", mReset);
         attr("in-user", "placeholder", "Your local login name", mReset);
         set("opt-ident", { textContent: "Same as default (none)" }, mReset);
         set("src-ident", { textContent: "default" }, mReset);
@@ -564,19 +570,19 @@
         set(P, REST, mReset);
 
         // ---- 4. Away from home: phone -> VPN -> the house with the server.
-        camTo(C4, 8.0, 1.0);
-        tl.to($("phone"), { x: 900, duration: 1.0, ease: "power2.inOut" }, 8.1);
-        tl.to($("house"), { opacity: 1, duration: 0.5, ease: "power1.out" }, 8.4);
-        tl.to($("vpn-line"), { clipPath: "inset(0 0 0 0%)", duration: 0.6, ease: "power1.inOut" }, 9.0);
-        tl.fromTo($("vpn-line"), { backgroundPositionX: 0 }, { backgroundPositionX: -32 * 20, duration: 2.0, ease: "none", immediateRender: false }, 9.0);
-        tl.fromTo($("shield"), { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)", immediateRender: false }, 9.15);
-        tl.to($("caption"), { opacity: 1, duration: 0.3, ease: "power1.out" }, 9.5);
+        camTo(C4, 8.85, 0.9);
+        tl.to($("phone"), { x: 900, duration: 0.9, ease: "power2.inOut" }, 8.9);
+        tl.to($("house"), { opacity: 1, duration: 0.5, ease: "power1.out" }, 9.15);
+        tl.to($("vpn-line"), { clipPath: "inset(0 0 0 0%)", duration: 0.55, ease: "power1.inOut" }, 9.7);
+        tl.fromTo($("vpn-line"), { backgroundPositionX: 0 }, { backgroundPositionX: -32 * 16, duration: 1.6, ease: "none", immediateRender: false }, 9.7);
+        tl.fromTo($("shield"), { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)", immediateRender: false }, 9.85);
+        tl.to($("caption"), { opacity: 1, duration: 0.3, ease: "power1.out" }, 10.1);
 
         // Back to frame 0.
-        for (const id of ["caption", "shield", "house"]) tl.to($(id), { opacity: 0, duration: 0.25, ease: "power1.in" }, 11.0);
-        tl.to($("vpn-line"), { clipPath: "inset(0 0 0 100%)", duration: 0.25, ease: "power1.in" }, 11.0);
-        tl.to($("phone"), { x: 0, duration: 0.8, ease: "power2.inOut" }, 11.0);
-        camTo(C1, 11.05, 0.85);
+        for (const id of ["caption", "shield", "house"]) tl.to($(id), { opacity: 0, duration: 0.25, ease: "power1.in" }, 11.2);
+        tl.to($("vpn-line"), { clipPath: "inset(0 0 0 100%)", duration: 0.25, ease: "power1.in" }, 11.2);
+        tl.to($("phone"), { x: 0, duration: 0.65, ease: "power2.inOut" }, 11.2);
+        camTo(C1, 11.2, 0.7);
         // The phone, off camera now, goes back to frame 0.
         const pReset = 11.92;
         set("p-db", { opacity: 0 }, pReset);
