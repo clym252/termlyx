@@ -36,5 +36,5 @@ web encodes into `src/media/`. It renders what is committed, so commit the compo
 
 ## Open items
 
-- Production domain: make `og:image` absolute in both pages (see the HTML comment).
-- Privacy policy effective date: set on go-live day.
+- Live at https://termlyx.pages.dev (Cloudflare Pages project `termlyx`, production branch `main`; PRs get preview URLs).
+- Custom domain: when added, update the absolute `og:image` host in both pages.
