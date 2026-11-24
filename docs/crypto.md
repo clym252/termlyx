@@ -295,6 +295,12 @@ slot and to its vault. Records are sealed with the VaultKey as described under
   for when code signing lands. Windows uses Windows Hello (see "Quick unlock
   on Windows"), iOS Face ID or Touch ID (see "Quick unlock on iOS"); other
   platforms have no gate.
+* **Quick unlock on Linux.** The DeviceKey sits in the Secret Service keyring
+  with no presence check. Once the keyring is unlocked (normally at login),
+  any process running as the user can read it, and with the vault file that
+  opens the vault. Quick unlock on Linux is therefore about as strong as
+  keeping the master password in the keyring. Settings says so next to the
+  switch.
 * **Lock.** The VaultKey and account secret are dropped (zeroized). No
   decrypted records are cached; every read decrypts from the store.
 * **Bounds.** Stored Argon2 parameters are checked before use: `m_kib` at most
@@ -507,4 +513,8 @@ here is password-derived.
 * **Password change** re-wraps only the account secret (`kdf`,
   `account_secret.kek`); the VaultKey, the recovery wrap and every envelope
   are unchanged, which is why other devices can adopt a new password without
-  re-downloading anything.
+  re-downloading anything. **Limit:** a copy of the vault file made before
+  the change (an OS backup, a `.before-join-*` backup, or an old backup of
+  the sync server) still opens with the old password, and the VaultKey in it
+  decrypts records written after the change too. If a password leaked,
+  changing it does not protect copies an attacker may already hold.

@@ -60,7 +60,7 @@ function quickUnlockWords(kind: QuickUnlockKind): { label: string; help: string 
       }
     : {
         label: "Unlock with system keychain",
-        help: "Keeps a key in this computer's keychain so you can unlock without typing the master password. The master password still works.",
+        help: "Keeps a key in this computer's keychain so you can unlock without typing the master password. There is no fingerprint or password check: on Linux, any program running as you can use the key while your keyring is unlocked. The master password still works.",
       };
 }
 

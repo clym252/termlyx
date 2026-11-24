@@ -95,6 +95,9 @@ export function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
               Sync is on: this changes the password of your sync account too, so it needs a connection to the server.
             </p>
           )}
+          <p className="muted small">
+            Copies of your vault made before the change, such as backups, still open with the old password.
+          </p>
         </div>
         {error && (
           <p role="alert" className="form-error">
