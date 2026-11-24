@@ -153,6 +153,8 @@ export function TerminalPane({
       minimumContrastRatio: 4.5,
       allowProposedApi: true,
       theme: { ...theme.terminal },
+      // OSC 8 links come from the remote; xterm's default shows a confirm() whose text the remote controls.
+      linkHandler: { activate: () => {} },
     });
     const fit = new FitAddon();
     t.loadAddon(fit);
