@@ -44,7 +44,12 @@ export function check(dist) {
       }
     }
 
-    const text = src.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, "").replace(/<[^>]*>/g, " ");
+    // Strip until stable: one pass can leave a tag behind (e.g. "<scr<script>ipt>").
+    let text = src, prev;
+    do {
+      prev = text;
+      text = text.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, "").replace(/<[^>]*>/g, " ");
+    } while (text !== prev);
     for (const m of text.matchAll(/\bv\d+\.\d+\.\d+\b/g)) fail(f, "no-version", m[0]);
 
     const ids = new Set([...src.matchAll(/\sid\s*=\s*["']([^"']*)["']/gi)].map((m) => m[1]));
