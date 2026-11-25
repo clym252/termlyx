@@ -3,40 +3,63 @@ import { readFileSync } from "node:fs";
 import pw from "../../apps/tauri/node_modules/@playwright/test/index.js";
 const { test, expect } = pw;
 
-const RELEASES = "https://github.com/clym252/termlyx/releases/latest";
+const DMG = "https://github.com/clym252/termlyx/releases/latest/download/Termlyx_universal.dmg";
+const EXE = "https://github.com/clym252/termlyx/releases/latest/download/Termlyx_x64-setup.exe";
 const WIN_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36";
+const MAC_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36";
+const LINUX_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36";
 const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+// Chromium keeps the real userAgentData.platform; drop it so the UA string decides.
+const uaOnly = (page) => page.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { value: undefined }));
 
 test.describe("no-js downloads", () => {
   test.use({ javaScriptEnabled: false });
-  test("both links visible with release href", async ({ page }) => {
+  test("hero and nav jump to the download section, which links both installers", async ({ page }) => {
     await page.goto("/");
-    for (const id of ["#dl-mac", "#dl-win"]) {
-      await expect(page.locator(id)).toBeVisible();
-      await expect(page.locator(id)).toHaveAttribute("href", RELEASES);
-    }
+    await expect(page.locator("#dl-primary")).toHaveAttribute("href", "#download");
+    await expect(page.locator("#nav-download")).toHaveAttribute("href", "#download");
+    await expect(page.locator("#dl-mac")).toHaveAttribute("href", DMG);
+    await expect(page.locator("#dl-win")).toHaveAttribute("href", EXE);
+    await expect(page.locator("#dl-mac")).toBeVisible();
+    await expect(page.locator("#dl-win")).toBeVisible();
   });
 });
+
+for (const [name, ua, href, label] of [["mac", MAC_UA, DMG, "Download for macOS"], ["windows", WIN_UA, EXE, "Download for Windows"]]) {
+  test.describe(`${name} visitor`, () => {
+    test.use({ userAgent: ua });
+    test("nav and hero download the installer directly", async ({ page }) => {
+      await uaOnly(page);
+      await page.goto("/");
+      await expect(page.locator("#dl-primary")).toHaveAttribute("href", href);
+      await expect(page.locator("#dl-primary")).toHaveText(label);
+      await expect(page.locator("#nav-download")).toHaveAttribute("href", href);
+    });
+  });
+}
 
 test.describe("windows order", () => {
   test.use({ userAgent: WIN_UA });
-  test("windows link first in hero", async ({ page }) => {
-    // Chromium keeps the real userAgentData.platform; drop it so the UA string decides.
-    await page.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { value: undefined }));
+  test("windows link first in the download section", async ({ page }) => {
+    await uaOnly(page);
     await page.goto("/");
-    await expect(page.locator("[data-downloads]").first().locator("a").first()).toHaveAttribute("id", "dl-win");
+    await expect(page.locator("[data-downloads] a").first()).toHaveAttribute("id", "dl-win");
   });
 });
 
-test.describe("iphone", () => {
-  test.use({ userAgent: IPHONE_UA });
-  test("desktop buttons and coming-soon note visible", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("#dl-mac")).toBeVisible();
-    await expect(page.locator("#dl-win")).toBeVisible();
-    await expect(page.getByText("iOS & Android coming soon")).toBeVisible();
+for (const [name, ua] of [["iphone", IPHONE_UA], ["linux", LINUX_UA]]) {
+  test.describe(name, () => {
+    test.use({ userAgent: ua });
+    test("buttons jump to the download section", async ({ page }) => {
+      await uaOnly(page);
+      await page.goto("/");
+      await expect(page.locator("#dl-primary")).toHaveAttribute("href", "#download");
+      await expect(page.locator("#dl-primary")).toHaveText("Download the beta");
+      await expect(page.locator("#nav-download")).toHaveAttribute("href", "#download");
+      if (name === "iphone") await expect(page.getByText("iOS & Android coming soon")).toBeVisible();
+    });
   });
-});
+}
 
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });

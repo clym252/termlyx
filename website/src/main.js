@@ -1,19 +1,33 @@
-const ua = navigator.userAgentData?.platform || navigator.userAgent;
-const P = "bg-accent text-onaccent font-semibold";
-const S = "border border-rule hover:border-accent/50 font-medium";
+const ua = navigator.userAgent;
+const platform = navigator.userAgentData?.platform || ua;
+// Phones and tablets have no build yet (iPadOS reports "Macintosh" but has touch); they keep the jump to #download.
+const mobile = /iPhone|iPad|iPod|Android/i.test(ua) || (/Mac/i.test(platform) && navigator.maxTouchPoints > 1);
+const os = mobile ? null : /Windows/i.test(platform) ? "win" : /Mac/i.test(platform) ? "mac" : null;
 
-// (a) Windows visitors get the Windows download first and primary-styled.
-if (/Windows/i.test(ua)) {
-  for (const box of document.querySelectorAll("[data-downloads]")) {
-    const mac = box.querySelector('a[id^="dl-mac"]');
-    const win = box.querySelector('a[id^="dl-win"]');
-    if (!mac || !win) continue;
-    const item = (a) => { while (a.parentElement !== box) a = a.parentElement; return a; };
-    mac.classList.remove(...P.split(" ")); mac.classList.add(...S.split(" "));
-    win.classList.remove(...S.split(" ")); win.classList.add(...P.split(" "));
-    box.prepend(item(win));
-    if (mac.id === "dl-mac") { mac.lastChild.textContent = "macOS"; win.lastChild.textContent = "Download for Windows"; }
+// (a) Mac and Windows visitors: the nav and hero buttons download the right installer directly.
+if (os) {
+  const dl = document.getElementById(os === "win" ? "dl-win" : "dl-mac");
+  const name = os === "win" ? "Windows" : "macOS";
+  for (const a of document.querySelectorAll("[data-detect]")) {
+    a.href = dl.href;
+    a.setAttribute("aria-label", `Download Termlyx for ${name}`);
+    const label = a.querySelector("[data-label]");
+    if (label) label.textContent = `Download for ${name}`;
+    const icon = a.querySelector(os === "win" ? "[data-icon-win]" : "[data-icon-mac]");
+    if (icon) icon.hidden = false;
   }
+  const note = document.querySelector("[data-note]");
+  if (note) note.textContent = os === "win" ? "Windows installer · SmartScreen asks once" : "Universal · signed and notarized";
+}
+
+// Windows visitors also get the Windows download first and primary-styled in the download section.
+if (os === "win") {
+  const P = "bg-accent text-onaccent font-semibold";
+  const S = "border border-rule hover:border-accent/50 font-medium";
+  const mac = document.getElementById("dl-mac"), win = document.getElementById("dl-win");
+  mac.classList.remove(...P.split(" ")); mac.classList.add(...S.split(" "));
+  win.classList.remove(...S.split(" ")); win.classList.add(...P.split(" "));
+  win.parentElement.prepend(win);
 }
 
 // (d) Self-host box: OS tabs and copy button.
