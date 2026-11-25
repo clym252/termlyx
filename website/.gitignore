@@ -1,6 +1,0 @@
-dist/
-node_modules/
-clips/**/renders/
-test-results/
-clips/**/.hyperframes/
-clips/media/
