@@ -6,11 +6,24 @@
 # TERMLYX_PORT (host port, default 8443) is remembered for later runs.
 set -eu
 
+# All in main(), called on the last line: a download cut short by `curl | sh`
+# defines nothing it runs.
+main() {
+
 OWNER="clym252" # GitHub owner; keep in step with compose.yml and release.yml
 BASE="${TERMLYX_RELEASE_BASE:-https://github.com/$OWNER/termlyx/releases/latest/download}"
 DIR="$HOME/termlyx-server"
 
 die() { echo "error: $*" >&2; exit 1; }
+
+# compose.yml pins the image by digest, so it must arrive untampered: https
+# only, plain http just for a server on this machine.
+case "$BASE" in
+  https://*) ;;
+  *@*) die "TERMLYX_RELEASE_BASE must be an https:// URL" ;;
+  http://localhost | http://localhost[:/]* | http://127.0.0.1 | http://127.0.0.1[:/]* | "http://[::1]" | "http://[::1]"[:/]*) ;;
+  *) die "TERMLYX_RELEASE_BASE must be an https:// URL (plain http only for localhost)" ;;
+esac
 
 case "$(uname -s)" in
   Darwin) HELP="https://docs.docker.com/desktop/setup/install/mac-install/" ;;
@@ -97,3 +110,6 @@ esac
 for ip in $ips; do
   case "$ip" in *:* | 169.254.*) ;; *) echo "  https://$ip:${PORT:-8443}" ;; esac # IPv4 only
 done
+}
+
+main "$@"

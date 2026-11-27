@@ -172,6 +172,8 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -295,8 +297,19 @@ jobs:
           cp -- artifacts/release-mac/* artifacts/release-windows/* artifacts/release-sbom/* \
             artifacts/release-bin-x86_64-unknown-linux-musl/* artifacts/release-bin-aarch64-unknown-linux-musl/* dist/
           ls -l dist
+      # compose.yml names this release's image by digest, so the SHA256SUMS the
+      # install scripts check it against covers the server code as well.
       - name: Server deploy files
-        run: cp deploy/compose.yml deploy/install.sh deploy/install.ps1 deploy/termlyx-server.service dist/
+        env:
+          DIGEST: ${{ needs.image.outputs.digest }}
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "bad image digest: '$DIGEST'" >&2; exit 1; }
+          cp deploy/install.sh deploy/install.ps1 deploy/termlyx-server.service dist/
+          from="ghcr.io/${OWNER}/termlyx-server:latest}"
+          to="ghcr.io/${OWNER}/termlyx-server:${GITHUB_REF_NAME}@${DIGEST}}"
+          [ "$(grep -cF -- "$from" deploy/compose.yml)" = 1 ] || { echo "no single $from in deploy/compose.yml" >&2; exit 1; }
+          sed "s|${from}|${to}|" deploy/compose.yml > dist/compose.yml
+          grep -F -- "$to" dist/compose.yml
       # Fails unless Mac and Windows each have one bundle and a signature, so a
       # partial manifest is never published.
       - name: Updater manifest (latest.json)

@@ -16,6 +16,12 @@ $Help = 'https://docs.docker.com/desktop/setup/install/windows-install/'
 function Die($m) { throw $m }
 
 try {
+# compose.yml pins the image by digest, so it must arrive untampered: https
+# only, plain http just for a server on this machine.
+$u = $null
+if (-not [Uri]::TryCreate($Base, 'Absolute', [ref]$u) -or -not ($u.Scheme -eq 'https' -or ($u.Scheme -eq 'http' -and $u.IsLoopback))) {
+    Die 'TERMLYX_RELEASE_BASE must be an https:// URL (plain http only for localhost)'
+}
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { Die "Docker is not installed. Install Docker Desktop from $Help and run this again." }
 docker compose version *> $null
 if ($LASTEXITCODE -ne 0) { Die "Docker Compose v2 is missing. See $Help and run this again." }
