@@ -166,18 +166,44 @@ impl RateLimiter {
         now: i64,
         limits: &Limits,
     ) -> ApiResult<()> {
+        self.attempt(ip, Some(username), now, limits)
+    }
+
+    /// Like [`Self::check_attempt`] with only the address windows: for a
+    /// request that proved it comes from one of the account's own devices,
+    /// which a stranger filling the username's window must not block.
+    pub fn check_ip(&self, ip: IpAddr, now: i64, limits: &Limits) -> ApiResult<()> {
+        self.attempt(ip, None, now, limits)
+    }
+
+    fn attempt(
+        &self,
+        ip: IpAddr,
+        username: Option<&str>,
+        now: i64,
+        limits: &Limits,
+    ) -> ApiResult<()> {
         let mut g = self.lock();
-        let user = username.to_owned();
+        let user = username.map(str::to_owned);
         let net = net48(ip);
         if !has_room(&mut g.ip, &ip, now, limits.ip_per_minute)
-            || !has_room(&mut g.net48, &net, now, limits.ip_per_minute.saturating_mul(NET48_FACTOR))
-            || !has_room(&mut g.user, &user, now, limits.username_per_minute)
+            || !has_room(
+                &mut g.net48,
+                &net,
+                now,
+                limits.ip_per_minute.saturating_mul(NET48_FACTOR),
+            )
+            || user
+                .as_ref()
+                .is_some_and(|u| !has_room(&mut g.user, u, now, limits.username_per_minute))
         {
             return Err(ApiError::of(ErrorCode::RateLimited));
         }
         record(&mut g.ip, &ip, now);
         record(&mut g.net48, &net, now);
-        record(&mut g.user, &user, now);
+        if let Some(u) = &user {
+            record(&mut g.user, u, now);
+        }
         Ok(())
     }
 

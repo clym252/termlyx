@@ -10,10 +10,11 @@ use std::time::Duration;
 use argon2::{Algorithm, Argon2, Params, Version};
 use axum::Json;
 use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::routing::post;
 use core_proto::{
-    AccountMaterial, CodeVerifyReq, CodeVerifyResp, DeviceInfo, ErrorCode, KdfWire, PreloginReq,
-    PreloginResp, RegisterReq, TokenResp,
+    AccountMaterial, CodeVerifyReq, CodeVerifyResp, DeviceInfo, ErrorCode, HEADER_DEVICE, KdfWire,
+    PreloginReq, PreloginResp, RegisterReq, TokenResp,
 };
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::{Digest, Sha256};
@@ -231,15 +232,33 @@ pub async fn check_verifier(key: Vec<u8>, stored: Option<(Vec<u8>, Vec<u8>)>) ->
 
 // -------------------------------------------------------------- prelogin
 
-/// Deterministic fake KDF parameters for a username that has no account:
-/// production defaults and `salt = HMAC-SHA256(server_secret, "prelogin|" +
-/// username)[..16]`, so repeated queries agree and different names differ.
-pub fn fake_kdf(server_secret: &[u8; 32], username: &str) -> KdfWire {
-    let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(server_secret)
-        .expect("HMAC accepts any key length");
-    mac.update(b"prelogin|");
-    mac.update(username.as_bytes());
-    let tag = mac.finalize().into_bytes();
+/// How long a made-up username keeps one fake salt.
+pub const FAKE_SALT_PERIOD_MS: i64 = 90 * 24 * 60 * 60 * 1000;
+
+/// Fake KDF parameters for a username that has no account at `now`:
+/// production defaults and a salt that is stable for [`FAKE_SALT_PERIOD_MS`]
+/// and then changes, at a different moment for each name. A real account's
+/// salt changes now and then (password change, recovery), so a fake one that
+/// never changed would give the made-up name away to a patient poller.
+pub fn fake_kdf(server_secret: &[u8; 32], username: &str, now: i64) -> KdfWire {
+    let hmac = |parts: &[&[u8]]| {
+        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(server_secret)
+            .expect("HMAC accepts any key length");
+        for p in parts {
+            mac.update(p);
+        }
+        mac.finalize().into_bytes()
+    };
+    let phase = hmac(&[b"prelogin-phase|", username.as_bytes()]);
+    let phase = u64::from_be_bytes(phase[..8].try_into().expect("8 bytes"))
+        % FAKE_SALT_PERIOD_MS.unsigned_abs();
+    let epoch = (now.max(0).unsigned_abs() + phase) / FAKE_SALT_PERIOD_MS.unsigned_abs();
+    let tag = hmac(&[
+        b"prelogin|",
+        &epoch.to_be_bytes(),
+        b"|",
+        username.as_bytes(),
+    ]);
     KdfWire {
         m_kib: FAKE_M_KIB,
         t: FAKE_T,
@@ -251,11 +270,33 @@ pub fn fake_kdf(server_secret: &[u8; 32], username: &str) -> KdfWire {
 async fn prelogin(
     State(st): State<AppState>,
     ClientIp(ip): ClientIp,
+    headers: HeaderMap,
     Json(req): Json<PreloginReq>,
 ) -> ApiResult<Json<PreloginResp>> {
     let username = normalize_username(&req.username)?;
-    st.limiter
-        .check_attempt(ip, &username, st.now_ms(), &st.limits)?;
+    // One of the account's own devices skips the username window, which
+    // anyone who knows the name could keep full. Device ids are not secret,
+    // but prelogin hands out nothing a stranger cannot already get.
+    let device = headers.get(HEADER_DEVICE).and_then(|v| v.to_str().ok());
+    let own: Option<i64> = match device {
+        Some(d) => {
+            sqlx::query_scalar(
+                "SELECT 1 FROM devices d JOIN accounts a ON a.id = d.account_id \
+                 WHERE a.username = ? AND d.id = ? AND d.revoked = 0",
+            )
+            .bind(&username)
+            .bind(d)
+            .fetch_optional(&st.db)
+            .await?
+        }
+        None => None,
+    };
+    if own.is_some() {
+        st.limiter.check_ip(ip, st.now_ms(), &st.limits)?;
+    } else {
+        st.limiter
+            .check_attempt(ip, &username, st.now_ms(), &st.limits)?;
+    }
     let row: Option<(i64, i64, i64, Vec<u8>)> =
         sqlx::query_as("SELECT kdf_m_kib, kdf_t, kdf_p, kdf_salt FROM accounts WHERE username = ?")
             .bind(&username)
@@ -268,7 +309,7 @@ async fn prelogin(
             p: u32::try_from(p).map_err(ApiError::internal)?,
             salt,
         },
-        None => fake_kdf(&st.server_secret, &username),
+        None => fake_kdf(&st.server_secret, &username, st.now_ms()),
     };
     Ok(Json(PreloginResp { kdf }))
 }
@@ -529,12 +570,36 @@ mod tests {
 
     #[test]
     fn fake_kdf_is_stable_and_per_name() {
-        let secret = [7u8; 32];
-        let a = fake_kdf(&secret, "alice");
-        assert_eq!(a, fake_kdf(&secret, "alice"));
-        assert_ne!(a.salt, fake_kdf(&secret, "bob").salt);
-        assert_ne!(a.salt, fake_kdf(&[8u8; 32], "alice").salt);
+        let secret = random_bytes::<32>();
+        let now = 1_800_000_000_000;
+        let a = fake_kdf(&secret, "alice", now);
+        assert_eq!(a, fake_kdf(&secret, "alice", now));
+        assert_ne!(a.salt, fake_kdf(&secret, "bob", now).salt);
+        assert_ne!(a.salt, fake_kdf(&random_bytes::<32>(), "alice", now).salt);
         assert_eq!((a.m_kib, a.t, a.p, a.salt.len()), (65536, 3, 4, 16));
+    }
+
+    #[test]
+    fn fake_salt_changes_once_a_period_at_a_per_name_moment() {
+        let secret = random_bytes::<32>();
+        let now = 1_800_000_000_000;
+        let step = FAKE_SALT_PERIOD_MS / 100;
+        // Over one period each name's salt changes exactly once...
+        let changes = |name: &str| {
+            (0..100)
+                .filter(|i| {
+                    fake_kdf(&secret, name, now + i * step).salt
+                        != fake_kdf(&secret, name, now + (i + 1) * step).salt
+                })
+                .collect::<Vec<_>>()
+        };
+        let moments: Vec<_> = ["alice", "bob", "carol", "dave", "erin"]
+            .into_iter()
+            .map(changes)
+            .collect();
+        assert!(moments.iter().all(|m| m.len() == 1), "{moments:?}");
+        // ...and not at the same moment for every name.
+        assert!(moments.iter().any(|m| m != &moments[0]), "{moments:?}");
     }
 
     #[tokio::test]

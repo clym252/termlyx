@@ -11,11 +11,12 @@
 //! | `TERMLYX_IPS` | comma list of IPs for the certificate | none |
 //! | `TERMLYX_URL` | public URL put into full codes | `https://{first name}` if names are set, else none |
 //! | `TERMLYX_ALLOW_PLAIN` | allow `off` on a non-loopback address | `false` |
+//! | `TERMLYX_VAULT_QUOTA_MB` | most sealed-record bytes one vault may store, MiB; `0` for no limit | `256` |
 //!
 //! Every variable is also read as `TETHER_X` when `TERMLYX_X` is unset.
 //!
 //! `server.toml` uses the lowercase keys `bind`, `tls`, `tls_cert`, `tls_key`,
-//! `names`, `ips`, `url`, `allow_plain_remote`. The data directory itself can
+//! `names`, `ips`, `url`, `allow_plain_remote`, `vault_quota_mb`. The data directory itself can
 //! only come from the environment.
 
 use std::net::{IpAddr, SocketAddr};
@@ -85,7 +86,12 @@ pub struct Config {
     pub public_url: Option<String>,
     /// Allow `TlsMode::Off` on a non-loopback address.
     pub allow_plain_remote: bool,
+    /// Most bytes of sealed records one vault may hold; `0` for no limit.
+    pub vault_quota_bytes: u64,
 }
+
+/// Default [`Config::vault_quota_bytes`], in MiB.
+const DEFAULT_VAULT_QUOTA_MB: u64 = 256;
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -98,6 +104,7 @@ struct FileConfig {
     ips: Option<Vec<String>>,
     url: Option<String>,
     allow_plain_remote: Option<bool>,
+    vault_quota_mb: Option<u64>,
 }
 
 fn invalid(name: &'static str, reason: impl ToString) -> ConfigError {
@@ -135,6 +142,7 @@ impl Config {
             ips: vec![],
             public_url: None,
             allow_plain_remote: false,
+            vault_quota_bytes: DEFAULT_VAULT_QUOTA_MB << 20,
         }
     }
 
@@ -232,6 +240,17 @@ impl Config {
             .or(file.url)
             .or_else(|| explicit_names.then(|| format!("https://{}", names[0])));
 
+        let vault_quota_mb = match get("TERMLYX_VAULT_QUOTA_MB") {
+            Some(v) => v
+                .trim()
+                .parse::<u64>()
+                .map_err(|e| invalid("TERMLYX_VAULT_QUOTA_MB", e))?,
+            None => file.vault_quota_mb.unwrap_or(DEFAULT_VAULT_QUOTA_MB),
+        };
+        let vault_quota_bytes = vault_quota_mb
+            .checked_mul(1 << 20)
+            .ok_or_else(|| invalid("TERMLYX_VAULT_QUOTA_MB", "too large"))?;
+
         let cfg = Self {
             data_dir,
             bind,
@@ -240,6 +259,7 @@ impl Config {
             ips,
             public_url,
             allow_plain_remote,
+            vault_quota_bytes,
         };
         cfg.check()?;
         Ok(cfg)
@@ -293,6 +313,7 @@ mod tests {
         assert_eq!(c.names, ["termlyx", "localhost"]);
         assert_eq!(c.public_url, None);
         assert!(!c.allow_plain_remote);
+        assert_eq!(c.vault_quota_bytes, 256 << 20);
         assert_eq!(
             Config::from_lookup(lookup(&[("HOME", "/h")]))
                 .unwrap()
@@ -398,7 +419,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("server.toml"),
-            "bind = \"127.0.0.1:1111\"\nnames = [\"from-file\"]\nurl = \"https://file.example\"\n",
+            "bind = \"127.0.0.1:1111\"\nnames = [\"from-file\"]\nurl = \"https://file.example\"\nvault_quota_mb = 5\n",
         )
         .unwrap();
         let c = Config::from_lookup(lookup(&[
@@ -409,6 +430,13 @@ mod tests {
         assert_eq!(c.bind.port(), 2222, "env beats file");
         assert_eq!(c.names, ["from-file"], "file beats default");
         assert_eq!(c.public_url.as_deref(), Some("https://file.example"));
+        assert_eq!(c.vault_quota_bytes, 5 << 20);
+        let c = Config::from_lookup(lookup(&[
+            ("TETHER_DATA", dir.path().to_str().unwrap()),
+            ("TERMLYX_VAULT_QUOTA_MB", "0"),
+        ]))
+        .unwrap();
+        assert_eq!(c.vault_quota_bytes, 0, "env beats file; 0 is no limit");
     }
 
     #[test]
@@ -421,6 +449,8 @@ mod tests {
             vec![("TETHER_DATA", d), ("TETHER_BIND", "nonsense")],
             vec![("TETHER_DATA", d), ("TETHER_IPS", "not-an-ip")],
             vec![("TETHER_DATA", d), ("TETHER_ALLOW_PLAIN", "maybe")],
+            vec![("TETHER_DATA", d), ("TETHER_VAULT_QUOTA_MB", "lots")],
+            vec![("TETHER_DATA", d), ("TETHER_VAULT_QUOTA_MB", "-1")],
             // TLS off on all interfaces without permission.
             vec![("TETHER_DATA", d), ("TETHER_TLS", "off")],
         ] {

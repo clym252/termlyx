@@ -192,6 +192,10 @@ response bodies are the `core-proto` types named in the table below.
   sleep, a timeout); two concurrent refreshes with one token end with exactly
   one live session (the later answer's). Server migration `0004` adds the
   columns this needs; tokens rotated before it get no grace.
+  *Addendum (server hardening, issue 35):* the invalidated pair's refresh
+  token is kept as rotated-out, so presenting it later is reuse and revokes
+  the device. A device whose answer really was lost never holds it; one that
+  did get it learns that someone else used its previous token.
 * **Revocation.** A revoked device keeps its (now useless) token rows, so its
   next request of any kind, including `refresh` and `login`, is answered
   `401 revoked` ("device revoked") rather than a generic "sign in again". It
@@ -236,12 +240,24 @@ response bodies are the `core-proto` types named in the table below.
   is stored in the database and survives a restart. Unknown usernames follow
   the same rules in memory (so a locked account looks like any other name),
   bounded to 100 000 names with the oldest evicted first; **their counts and
-  locks are lost when the server restarts**.
+  locks are lost when the server restarts**. Usernames are not secret, so a
+  request that proves it comes from the account itself skips the per-username
+  window and the lock (not the per-address window, and not the key check):
+  `login` with the secret of one of the account's devices that is not revoked,
+  or with a live link token of the account, and `prelogin` naming one of its
+  devices in `X-Tether-Device`. `recover-login` has no such proof and stays
+  locked.
 * **No enumeration.** `prelogin` answers an unknown username with production
   default KDF parameters (`m` 65536 KiB, `t` 3, `p` 4) and a stable salt
   `HMAC-SHA256(server_secret, "prelogin|" + username)[..16]`: same shape, same
   values every time, different per name. A wrong key and an unknown username
   both get `401 unauthorized` and cost the same Argon2 work.
+  *Addendum (server hardening, issue 34):* the HMAC input also carries a
+  90-day epoch, offset per name, so a made-up name's salt is stable for 90
+  days and then replaced, at a different moment for each name (a real
+  account's salt changes too, after a password change or recovery). A failed
+  sign-in for an unknown username also writes to the database, as a real
+  account's failure count does. Clients see no difference.
 * A disabled account (`tether-server users disable`) is refused with
   `403 forbidden` at login, refresh and on every authenticated call.
 
@@ -405,6 +421,11 @@ server's clock; `400 update_client` when the client's `X-Tether-Schema` is
 below the account's high-water mark (reads are never gated). The 2 MiB body
 limit (see Conventions) still applies (`413`), so large vaults are pushed in
 several requests.
+*Addendum (server hardening, issue 38):* `403 forbidden` ("this vault is
+full") when the push would leave the vault holding more envelope bytes than
+the server's per-vault limit (default 256 MiB, set by the operator) and more
+than before the push. A push that does not grow the vault, such as deletions,
+is never refused for this.
 
 After a push with at least one `ok` result the server publishes `changed {seq:
 head}` to the account's other devices (see WebSocket).

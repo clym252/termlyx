@@ -795,3 +795,52 @@ fn leak_needles_find_every_encoding() {
     }
     needles.assert_absent("test", b"nothing to see here");
 }
+
+#[tokio::test]
+async fn a_vault_cannot_grow_past_its_quota() {
+    let srv = spawn_with(|c| c.vault_quota_bytes = 100).await;
+    let acct = register(&srv, "quota").await;
+    let tok = &acct.tokens.access_token;
+    let (a, b) = (new_id(), new_id());
+    push_ok(
+        &srv,
+        tok,
+        vec![item(row(&a, "host", now_ms(), &[1; 60]), None)],
+    )
+    .await;
+
+    // Growing past the limit refuses the whole push; nothing is written.
+    let res = push(
+        &srv,
+        tok,
+        vec![item(row(&b, "host", now_ms(), &[2; 60]), None)],
+    )
+    .await;
+    assert_err(&res, 403, ErrorCode::Forbidden);
+    assert!(error_of(&res).message.contains("full"));
+    assert_eq!(pull(&srv, tok, 0, None).await.changes.len(), 1);
+
+    // Shrinking is always allowed, and makes room again.
+    push_ok(
+        &srv,
+        tok,
+        vec![item(tombstone(&a, "host", now_ms()), Some(1))],
+    )
+    .await;
+    push_ok(
+        &srv,
+        tok,
+        vec![item(row(&b, "host", now_ms(), &[2; 60]), None)],
+    )
+    .await;
+
+    // Another account's vault has its own allowance.
+    let other = register_with(&srv, "quota2", 2, 1).await;
+    let c = new_id();
+    push_ok(
+        &srv,
+        &other.tokens.access_token,
+        vec![item(row(&c, "host", now_ms(), &[3; 90]), None)],
+    )
+    .await;
+}
