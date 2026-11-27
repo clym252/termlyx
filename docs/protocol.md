@@ -421,6 +421,11 @@ server's clock; `400 update_client` when the client's `X-Tether-Schema` is
 below the account's high-water mark (reads are never gated). The 2 MiB body
 limit (see Conventions) still applies (`413`), so large vaults are pushed in
 several requests.
+*Addendum (server hardening, issue 38):* `403 forbidden` ("this vault is
+full") when the push would leave the vault holding more envelope bytes than
+the server's per-vault limit (default 256 MiB, set by the operator) and more
+than before the push. A push that does not grow the vault, such as deletions,
+is never refused for this.
 
 After a push with at least one `ok` result the server publishes `changed {seq:
 head}` to the account's other devices (see WebSocket).

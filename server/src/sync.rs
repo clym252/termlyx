@@ -274,6 +274,16 @@ async fn apply(
     })
 }
 
+/// Bytes of sealed records `vault_id` holds (tombstones have empty envelopes).
+async fn vault_bytes(conn: &mut SqliteConnection, vault_id: &str) -> ApiResult<i64> {
+    Ok(sqlx::query_scalar(
+        "SELECT COALESCE(SUM(length(envelope)), 0) FROM records WHERE vault_id = ?",
+    )
+    .bind(vault_id)
+    .fetch_one(&mut *conn)
+    .await?)
+}
+
 /// `POST /v1/sync/push`.
 async fn push(
     State(st): State<AppState>,
@@ -300,9 +310,32 @@ async fn push(
         .await?;
     let start = head;
 
+    let quota = i64::try_from(st.cfg.vault_quota_bytes).unwrap_or(i64::MAX);
+    let used_before = if quota > 0 {
+        vault_bytes(&mut tx, &auth.vault_id).await?
+    } else {
+        0
+    };
+
     let mut results = Vec::with_capacity(req.items.len());
     for item in &req.items {
         results.push(apply(&mut tx, &auth.vault_id, item, &mut head, now).await?);
+    }
+    if quota > 0 {
+        // Only growth is refused, so deleting records always gets a full
+        // vault back under the limit. Returning drops (rolls back) `tx`.
+        let used = vault_bytes(&mut tx, &auth.vault_id).await?;
+        if used > quota && used > used_before {
+            tracing::warn!(account = %auth.account_id, used, quota, "sync push over the vault quota");
+            return Err(ApiError::new(
+                ErrorCode::Forbidden,
+                format!(
+                    "this vault is full: the server allows {} MiB of synced data; \
+                     delete some items or ask the server's operator to raise the limit",
+                    quota >> 20
+                ),
+            ));
+        }
     }
     if head != start {
         sqlx::query("UPDATE vault_seq SET head = ? WHERE vault_id = ?")
