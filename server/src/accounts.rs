@@ -570,18 +570,18 @@ mod tests {
 
     #[test]
     fn fake_kdf_is_stable_and_per_name() {
-        let secret = [7u8; 32];
+        let secret = random_bytes::<32>();
         let now = 1_800_000_000_000;
         let a = fake_kdf(&secret, "alice", now);
         assert_eq!(a, fake_kdf(&secret, "alice", now));
         assert_ne!(a.salt, fake_kdf(&secret, "bob", now).salt);
-        assert_ne!(a.salt, fake_kdf(&[8u8; 32], "alice", now).salt);
+        assert_ne!(a.salt, fake_kdf(&random_bytes::<32>(), "alice", now).salt);
         assert_eq!((a.m_kib, a.t, a.p, a.salt.len()), (65536, 3, 4, 16));
     }
 
     #[test]
     fn fake_salt_changes_once_a_period_at_a_per_name_moment() {
-        let secret = [7u8; 32];
+        let secret = random_bytes::<32>();
         let now = 1_800_000_000_000;
         let step = FAKE_SALT_PERIOD_MS / 100;
         // Over one period each name's salt changes exactly once...
@@ -593,10 +593,13 @@ mod tests {
                 })
                 .collect::<Vec<_>>()
         };
-        let (a, b) = (changes("alice"), changes("bob"));
-        assert_eq!((a.len(), b.len()), (1, 1));
+        let moments: Vec<_> = ["alice", "bob", "carol", "dave", "erin"]
+            .into_iter()
+            .map(changes)
+            .collect();
+        assert!(moments.iter().all(|m| m.len() == 1), "{moments:?}");
         // ...and not at the same moment for every name.
-        assert_ne!(a, b);
+        assert!(moments.iter().any(|m| m != &moments[0]), "{moments:?}");
     }
 
     #[tokio::test]
