@@ -19,7 +19,9 @@ version and the notes banner say "beta".
    approval of the `release` environment: review the run, then approve.
 5. A **draft** release appears with the assets below. Check it:
    - assets: `Termlyx_X.Y.Z_universal.dmg` (notarized and stapled), `Termlyx.app.tar.gz` and `.sig`,
-     `Termlyx_X.Y.Z_x64-setup.exe` and `.sig`, `termlyx-server-<target>`,
+     `Termlyx_X.Y.Z_x64-setup.exe` and `.sig`, the versionless copies
+     `Termlyx_universal.dmg` and `Termlyx_x64-setup.exe` (the website links to
+     them via `releases/latest/download/`), `termlyx-server-<target>`,
      `latest.json`, `SHA256SUMS`, `termlyx-X.Y.Z-sbom.cdx.json`, and the
      server deploy files;
    - `latest.json` lists both Mac and Windows with signatures;
@@ -55,14 +57,16 @@ jobs compile first with no secrets in the environment (`tauri build
 --no-bundle`, which runs the frontend build and every `build.rs`); only the
 `tauri bundle` step that signs, notarizes and writes the updater signature
 gets them. The exception
-is `PERSONAL_SCAN_PATTERNS`, a repo secret used by CI.
+is `PERSONAL_SCAN_PATTERNS`, a secret of the `personal-scan` environment
+(deployable from `main` only, no reviewer), used by CI's personal scan on
+pushes to `main`. Pull requests never see it; the pre-push hook covers them.
 
 | Credential | Secret name(s) | Lives in | Used by | Backup |
 |---|---|---|---|---|
 | Developer ID Application certificate (p12) and its password | `APPLE_CERTIFICATE` (base64 p12), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY` (the certificate's common name) | maintainer's login keychain; exported p12 in env `release` | Mac release job | password manager |
 | App Store Connect API key (.p8), key id, issuer id | `APPLE_API_KEY_P8` (the .p8 text), `APPLE_API_KEY` (key id), `APPLE_API_ISSUER` | env `release` | Mac notarization | password manager (Apple shows the .p8 once) |
 | Updater signing key (minisign) and password | `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; public key in `apps/tauri/src-tauri/tauri.conf.json` | env `release` | Mac and Windows release jobs | password manager **and** an offline copy. Losing it strands installed apps |
-| Personal-info scan patterns | `PERSONAL_SCAN_PATTERNS` (repo secret) | repo secrets; the file itself stays private | CI `Personal-info scan` | private copy |
+| Personal-info scan patterns | `PERSONAL_SCAN_PATTERNS` | env `personal-scan` (not a repo secret); the file itself stays private | CI `personal scan` job (pushes to `main`) | private copy |
 | `GITHUB_TOKEN` | automatic | each job | image push, release creation | none |
 | cosign | none: keyless (OIDC) | none | image signing | none |
 
@@ -125,8 +129,10 @@ stored. If the repository is renamed or moved, update the identity in the
 ### PERSONAL_SCAN_PATTERNS
 
 Create: put one regex per line in the private file, then
-`gh secret set PERSONAL_SCAN_PATTERNS < path/to/patterns`. Rotate by setting it
-again. Never commit the file or paste its lines into issues or logs.
+`gh secret set PERSONAL_SCAN_PATTERNS --env personal-scan < path/to/patterns`.
+Rotate by setting it again. Never commit the file or paste its lines into
+issues or logs. It must not also exist as a repo secret: a same-repo pull
+request runs its own workflow file and could print a repo secret.
 
 ## Repo settings
 
@@ -139,6 +145,7 @@ Set once, check after any ownership change:
 - default workflow permissions read-only;
 - approval required for workflows from fork PRs;
 - the `release` environment: required reviewer, `v*` tags only;
+- the `personal-scan` environment: deployment branch `main` only;
 - the GHCR package `termlyx-server` set to Public (new packages start private,
   and `docker pull` fails for strangers until then).
 

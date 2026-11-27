@@ -30,7 +30,9 @@ irm https://github.com/clym252/termlyx/releases/latest/download/install.ps1 | ie
 ```
 
 The script downloads a small `compose.yml` into a `termlyx-server` folder in
-your home folder, starts the server, waits until it is ready, and prints:
+your home folder, checks it against the release's `SHA256SUMS` (it names that
+release's server image by digest, so the check covers the image too), starts
+the server, waits until it is ready, and prints:
 
 - a **setup code** (it looks like `TLX-7K2P-...`),
 - the address or addresses you can reach it at, such as
@@ -215,7 +217,9 @@ Run the same install command again (section 1). It downloads the newest
 `compose.yml`, pulls the new image and restarts the server. Your data and
 accounts are not touched.
 
-By hand, in the `termlyx-server` folder:
+The downloaded `compose.yml` pins one release's image, so `docker compose pull`
+by hand does not move to a newer version; run the install command instead. A
+`compose.yml` you wrote yourself (section 2) with the `:latest` tag updates with:
 
 ```sh
 docker compose pull

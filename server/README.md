@@ -77,6 +77,14 @@ Certificate files must be inside the data volume. The same settings can live in
 `/data/server.toml` (keys `tls`, `tls_cert`, `tls_key`, `url`, `bind`, `names`,
 `ips`, `allow_plain_remote`, `behind_proxy`); the environment wins.
 
+## Storage limit
+
+Each vault may store at most 256 MiB of sealed records, so one account cannot
+fill the server's disk. A push that would grow a vault past the limit is
+refused as a whole (`403 forbidden`, "this vault is full"); deleting items
+always works. Change it with `TERMLYX_VAULT_QUOTA_MB` (or `vault_quota_mb` in
+`/data/server.toml`); `0` turns the limit off.
+
 ## Backup and restore
 
 A backup is a consistent copy of the database made while the server runs. It

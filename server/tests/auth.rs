@@ -293,6 +293,40 @@ async fn prelogin_unknown_user_is_indistinguishable() {
 }
 
 #[tokio::test]
+async fn prelogin_fake_salt_rotates_like_a_real_one_might() {
+    let srv = spawn().await;
+    register(&srv, "known").await;
+    let t0 = now_ms();
+    srv.set_clock(t0);
+    let real = kdf_of(&prelogin(&srv, "known").await).salt;
+    let ghost = kdf_of(&prelogin(&srv, "ghost").await).salt;
+    // A period later the made-up name has a new salt; the account does not.
+    srv.set_clock(t0 + 90 * 24 * 60 * MIN);
+    assert_eq!(kdf_of(&prelogin(&srv, "known").await).salt, real);
+    assert_ne!(kdf_of(&prelogin(&srv, "ghost").await).salt, ghost);
+}
+
+#[tokio::test]
+async fn a_failed_sign_in_writes_for_unknown_names_too() {
+    async fn data_version(c: &mut sqlx::SqliteConnection) -> i64 {
+        sqlx::query_scalar("PRAGMA data_version")
+            .fetch_one(c)
+            .await
+            .unwrap()
+    }
+    let srv = spawn().await;
+    let acct = register(&srv, "real").await;
+    // `data_version` moves when another connection commits a write.
+    let mut conn = srv.state.db.acquire().await.unwrap();
+    for name in ["real", "ghost"] {
+        let before = data_version(&mut conn).await;
+        let res = login_device_with(&srv, name, &acct.tokens.device_id, None, &[9; 32]).await;
+        assert_err(&res, 401, ErrorCode::Unauthorized);
+        assert_ne!(data_version(&mut conn).await, before, "{name}");
+    }
+}
+
+#[tokio::test]
 async fn wrong_auth_key_is_unauthorized_and_counts_toward_lockout() {
     let srv = spawn().await;
     let acct = register(&srv, "carol").await;
@@ -369,8 +403,9 @@ async fn lockout_after_ten_failures() {
     }
     // Let the per-minute window clear so only the lockout can answer now.
     srv.set_clock(t0 + 2 * MIN);
-    // Even the right key is refused while locked.
-    let res = login_device(&srv, &acct, &dev, &acct.auth_key).await;
+    // Even the right key is refused while locked (without the device's
+    // secret, which proves the request is the account's own).
+    let res = login_device_with(&srv, "dave", &dev, None, &acct.auth_key).await;
     assert_err(&res, 429, ErrorCode::RateLimited);
     // Recovery login shares the lock.
     let rec = RecoverReq {
@@ -386,7 +421,7 @@ async fn lockout_after_ten_failures() {
     // It lasts fifteen minutes from the tenth failure.
     srv.set_clock(t0 + 40_000 + 14 * MIN);
     assert_err(
-        &login_device(&srv, &acct, &dev, &acct.auth_key).await,
+        &login_device_with(&srv, "dave", &dev, None, &acct.auth_key).await,
         429,
         ErrorCode::RateLimited,
     );
@@ -407,6 +442,73 @@ async fn lockout_after_ten_failures() {
             .await
             .unwrap();
     assert!(locked > srv.state.now_ms());
+}
+
+#[tokio::test]
+async fn a_stranger_cannot_lock_the_account_out_of_its_own_devices() {
+    let srv = spawn().await;
+    let acct = register(&srv, "victim").await;
+    let dev = acct.tokens.device_id.clone();
+    let link = make_link(&srv, &acct.tokens.access_token).await;
+    let t0 = now_ms() + 2 * MIN;
+    srv.set_clock(t0);
+    // Someone who only knows the username: ten wrong keys lock it and fill
+    // the username's window.
+    for i in 0..10 {
+        let res = login_device_with(&srv, "victim", &dev, None, &[9; 32]).await;
+        assert_err(&res, 401, ErrorCode::Unauthorized);
+        srv.set_clock(t0 + (i + 1) * 1_000);
+    }
+    assert_err(
+        &login_device_with(&srv, "victim", &dev, None, &acct.auth_key).await,
+        429,
+        ErrorCode::RateLimited,
+    );
+    assert_err(&prelogin(&srv, "victim").await, 429, ErrorCode::RateLimited);
+
+    // The account's own device still gets through: prelogin naming it...
+    let body = serde_json::to_vec(&PreloginReq {
+        username: "victim".into(),
+    })
+    .unwrap();
+    let res = srv
+        .request(
+            "POST",
+            "/v1/prelogin",
+            &[
+                ("Content-Type", "application/json"),
+                ("X-Tether-Device", &dev),
+            ],
+            Some(body),
+        )
+        .await;
+    assert_eq!(res.status, 200);
+    // ...and login with its secret and the right key.
+    let res = login_device(&srv, &acct, &dev, &acct.auth_key).await;
+    assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+    // So does a new device with an add-device code.
+    let res = login_link(
+        &srv,
+        "victim",
+        &acct.auth_key,
+        code_token(&link.code),
+        "New",
+    )
+    .await;
+    assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+
+    // Recovery carries no such proof: still locked once the window clears.
+    srv.set_clock(t0 + 2 * MIN);
+    let rec = RecoverReq {
+        username: "victim".into(),
+        recovery_auth_key: acct.recovery_key.clone(),
+        device: device("x"),
+    };
+    assert_err(
+        &srv.post_json("/v1/recover-login", &rec).await,
+        429,
+        ErrorCode::RateLimited,
+    );
 }
 
 #[tokio::test]
@@ -551,6 +653,26 @@ async fn refresh_rejects_garbage() {
             ErrorCode::Unauthorized,
         );
     }
+}
+
+#[tokio::test]
+async fn unknown_refresh_token_does_not_wait_for_the_write_lock() {
+    let srv = spawn().await;
+    // Another writer holds the lock (busy timeout is 5 s).
+    let held = srv.state.db.begin_with("BEGIN IMMEDIATE").await.unwrap();
+    let res = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        srv.post_json(
+            "/v1/refresh",
+            &RefreshReq {
+                refresh_token: "B".repeat(42) + "A",
+            },
+        ),
+    )
+    .await
+    .expect("an unknown token is answered without the write lock");
+    assert_err(&res, 401, ErrorCode::Unauthorized);
+    drop(held);
 }
 
 #[tokio::test]
@@ -1294,8 +1416,8 @@ async fn a_lost_refresh_answer_is_retried_within_the_grace() {
     let again: TokenResp = res.json();
     assert_ne!(again.refresh_token, lost.refresh_token);
     assert_eq!(again.device_id, acct.tokens.device_id);
-    // The new session works; the unused successor was invalidated (not a
-    // revocation: it is simply unknown now).
+    // The new session works; the unused successor's access token was
+    // invalidated (its refresh token now revokes, see below).
     assert_eq!(
         get_auth(&srv, "/v1/devices", &again.access_token)
             .await
@@ -1307,11 +1429,6 @@ async fn a_lost_refresh_answer_is_retried_within_the_grace() {
         401,
         ErrorCode::Unauthorized,
     );
-    assert_err(
-        &refresh_with(&srv, &lost.refresh_token).await,
-        401,
-        ErrorCode::Unauthorized,
-    );
     // The newest token keeps rotating normally.
     let next = refresh_with(&srv, &again.refresh_token).await;
     assert_eq!(next.status, 200);
@@ -1319,6 +1436,36 @@ async fn a_lost_refresh_answer_is_retried_within_the_grace() {
     assert_err(&refresh_with(&srv, &r1).await, 401, ErrorCode::Revoked);
     assert_err(
         &get_auth(&srv, "/v1/devices", &next.json::<TokenResp>().access_token).await,
+        401,
+        ErrorCode::Revoked,
+    );
+}
+
+#[tokio::test]
+async fn replaying_the_old_token_in_the_grace_cannot_take_over_quietly() {
+    let srv = spawn().await;
+    let acct = register(&srv, "takeover").await;
+    let r1 = acct.tokens.refresh_token.clone();
+    // The device refreshes and gets its answer...
+    let mine: TokenResp = refresh_with(&srv, &r1).await.json();
+    // ...but a thief with the old token beats it to the first call.
+    let stolen = refresh_with(&srv, &r1).await;
+    assert_eq!(stolen.status, 200);
+    let stolen: TokenResp = stolen.json();
+    // The device's access token is gone, so it refreshes: reuse, revoked.
+    assert_err(
+        &get_auth(&srv, "/v1/devices", &mine.access_token).await,
+        401,
+        ErrorCode::Unauthorized,
+    );
+    assert_err(
+        &refresh_with(&srv, &mine.refresh_token).await,
+        401,
+        ErrorCode::Revoked,
+    );
+    // And the thief's session dies with the device.
+    assert_err(
+        &get_auth(&srv, "/v1/devices", &stolen.access_token).await,
         401,
         ErrorCode::Revoked,
     );
@@ -1394,13 +1541,17 @@ async fn concurrent_refreshes_leave_one_live_session() {
         let live_b = get_auth(&srv, "/v1/devices", &b.access_token).await.status == 200;
         assert!(live_a ^ live_b, "{name}: {live_a} {live_b}");
         let (live, dead) = if live_a { (&a, &b) } else { (&b, &a) };
-        assert_err(
-            &refresh_with(&srv, &dead.refresh_token).await,
-            401,
-            ErrorCode::Unauthorized,
-        );
         assert_eq!(refresh_with(&srv, &live.refresh_token).await.status, 200);
-        // A third presentation of the shared token is theft.
-        assert_err(&refresh_with(&srv, &r1).await, 401, ErrorCode::Revoked);
+        if i % 2 == 0 {
+            // A third presentation of the shared token is theft.
+            assert_err(&refresh_with(&srv, &r1).await, 401, ErrorCode::Revoked);
+        } else {
+            // So is presenting the replaced answer's token.
+            assert_err(
+                &refresh_with(&srv, &dead.refresh_token).await,
+                401,
+                ErrorCode::Revoked,
+            );
+        }
     }
 }

@@ -1,22 +1,24 @@
 // Workflow policy: actions pinned to a full commit SHA with a version comment,
 // no pull_request_target, read-only top-level permissions, and secrets only in
-// jobs that run in the protected `release` environment.
+// jobs that run in a protected environment: any secret in `release`, and only
+// the scan patterns in `personal-scan` (main only, so PR code never sees them).
 // Line-based on purpose (no YAML library); it fails closed on anything it
 // cannot place, such as `secrets[...]` or `toJSON(secrets)`.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const ALLOWED_SECRETS = new Set(["GITHUB_TOKEN", "PERSONAL_SCAN_PATTERNS"]);
+// Secrets each environment may use; `release` may use any. GITHUB_TOKEN is fine anywhere.
+const ENV_SECRETS = new Map([["personal-scan", new Set(["PERSONAL_SCAN_PATTERNS"])]]);
 const indent = (l) => l.length - l.trimStart().length;
 const blank = (l) => /^\s*(#|$)/.test(l);
 const unquote = (s) => s.trim().replace(/^(["'])(.*)\1$/, "$2");
 
-// For each line, the job it belongs to (or null) and whether that job runs in `release`.
+// For each line, the job it belongs to (or null), and each job's environment name.
 function jobsOf(lines) {
   const job = lines.map(() => null);
-  const release = new Set();
+  const env = new Map();
   const start = lines.findIndex((l) => /^jobs:\s*(#.*)?$/.test(l));
-  if (start < 0) return { job, release };
+  if (start < 0) return { job, env };
   let jobIndent = -1;
   let current = null;
   let envLine = -1; // index of a block-style `environment:` in the current job
@@ -36,15 +38,16 @@ function jobsOf(lines) {
       envLine = -1;
       const m = /^environment:\s*(.*?)\s*(#.*)?$/.exec(l.trim());
       if (m && m[1]) {
-        if (unquote(m[1]) === "release" || /^\{\s*name:\s*["']?release["']?\s*[,}]/.test(m[1])) release.add(current);
+        const flow = /^\{\s*name:\s*["']?([\w-]+)["']?\s*[,}]/.exec(m[1]);
+        env.set(current, flow ? flow[1] : unquote(m[1]));
       } else if (m) envLine = i;
     } else if (envLine >= 0 && n === jobIndent + 4) {
       const m = /^name:\s*(.*?)\s*(#.*)?$/.exec(l.trim());
-      if (m && unquote(m[1]) === "release") release.add(current);
+      if (m) env.set(current, unquote(m[1]));
     }
     job[i] = current;
   }
-  return { job, release };
+  return { job, env };
 }
 
 // Whether the step whose `uses:` is on line i has `with: name:` or `with: pattern:` after it.
@@ -66,7 +69,7 @@ export function checkWorkflow(text) {
   const lines = text.split(/\r?\n/);
   const problems = [];
   const at = (i, msg) => problems.push(`line ${i + 1}: ${msg}`);
-  const { job, release } = jobsOf(lines);
+  const { job, env } = jobsOf(lines);
 
   const permAt = lines.findIndex((l) => /^permissions:/.test(l));
   if (permAt < 0) problems.push("no top-level permissions");
@@ -92,13 +95,15 @@ export function checkWorkflow(text) {
       }
     }
 
-    const inRelease = job[i] !== null && release.has(job[i]);
+    const jobEnv = job[i] === null ? undefined : env.get(job[i]);
+    const inRelease = jobEnv === "release";
     if (/^\s*secrets:\s*inherit\b/.test(l) && !inRelease) at(i, "secrets: inherit outside the release environment");
     for (const expr of l.matchAll(/\$\{\{(.*?)\}\}/g)) {
       for (const s of expr[1].matchAll(/\bsecrets\b(\.([A-Za-z_][\w-]*))?/g)) {
         const name = s[2];
-        if (name && ALLOWED_SECRETS.has(name)) continue;
-        if (!inRelease) at(i, `secrets.${name ?? "?"} used outside a job with environment: release`);
+        if (inRelease || name === "GITHUB_TOKEN" || (name && ENV_SECRETS.get(jobEnv)?.has(name))) continue;
+        const home = [...ENV_SECRETS].find(([, names]) => names.has(name))?.[0] ?? "release";
+        at(i, `secrets.${name ?? "?"} used outside a job with environment: ${home}`);
       }
     }
   });
