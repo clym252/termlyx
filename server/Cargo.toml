@@ -33,7 +33,7 @@ argon2 = { workspace = true }
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "query", "tokio", "ws", "matched-path", "original-uri"] }
 # `no-provider`: the crypto provider is chosen below (ring), so aws-lc-rs
 # (a C/CMake build) is never pulled into the server.
-axum-server = { version = "0.8", features = ["tls-rustls-no-provider"] }
+axum-server = { version = "0.9", features = ["tls-rustls-no-provider"] }
 clap = { version = "4", features = ["derive"] }
 data-encoding = { workspace = true }
 getrandom = { workspace = true }
