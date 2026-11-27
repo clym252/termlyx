@@ -15,11 +15,17 @@
 # --vm: the same crates (debug, release) and incremental dirs on the VM; then on
 #   devvm (where Android builds): gen/android/**/build under ~/src/termlyx and the
 #   *-linux-android dirs of its cargo target dir (third-party deps included: they
-#   rebuild in the next `scripts/android.sh build`).
+#   rebuild in the next `scripts/android.sh build`). Then, unless cargo is running
+#   there, prunes that target's debug/: incremental, files in deps/ and examples/
+#   not read for $TETHER_CLEAN_DAYS days, and whole build/<pkg>-<hash>/ dirs none
+#   of whose files were (cargo rebuilds what is missing).
+#   Not done on the Mac: APFS only updates atime when it is older than mtime, so
+#   files in daily use look unread there.
 # --dry-run prints what would go, with sizes. Free space is printed before and after.
 #
 # Env:
 #   CARGO_TARGET_DIR  shared build cache (required)
+#   TETHER_CLEAN_DAYS  devvm prune age in days (default 3)
 #   TETHER_WIN_HOST, TETHER_WIN_KEY  as for scripts/win.sh
 #   TETHER_DEVVM_HOST, TETHER_DEVVM_KEY  as for scripts/devvm.sh (--vm)
 
@@ -35,9 +41,11 @@ KEY="${TETHER_WIN_KEY:-$HOME/.ssh/id_ed25519}"
 SSH_OPTS=(-i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15)
 DEVVM_HOST="${TETHER_DEVVM_HOST:?set TETHER_DEVVM_HOST (user@host of the Linux build VM)}"
 DEVVM_KEY="${TETHER_DEVVM_KEY:-$HOME/.ssh/id_ed25519}"
+DAYS="${TETHER_CLEAN_DAYS:-3}"
+[[ "$DAYS" =~ ^[1-9][0-9]*$ ]] || { echo "TETHER_CLEAN_DAYS must be a whole number of days > 0" >&2; exit 2; }
 
 usage() {
-  sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '2,31p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -164,13 +172,15 @@ EOF
   return "$rc"
 }
 
-# devvm builds the Android APKs: report/remove gen/android build output and the
-# Android target dirs of its cargo target dir (default ~/src/termlyx/target).
+# devvm builds the Android APKs and runs every session's Linux tests: report/remove
+# gen/android build output and the Android target dirs of its cargo target dir
+# (default ~/src/termlyx/target), then prune that target's debug/ by atime (the
+# root fs is relatime, so atime is right to within a day).
 clean_devvm() {
   echo "devvm Android build output:"
-  # shellcheck disable=SC2029 # DRY expands on the Mac on purpose
+  # shellcheck disable=SC2029 # DRY and DAYS expand on the Mac on purpose
   ssh -i "$DEVVM_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 "$DEVVM_HOST" \
-    "DRY=$DRY bash -s" <<'REMOTE'
+    "DRY=$DRY DAYS=$DAYS bash -s" <<'REMOTE'
 free() { df -h / | awk 'NR==2 {print $4}'; }
 echo "free before: $(free)"
 target="${CARGO_TARGET_DIR:-$HOME/src/termlyx/target}"
@@ -187,6 +197,36 @@ for dir in "$HOME"/src/termlyx/apps/tauri/src-tauri/gen/android/build \
   fi
 done
 [ "$found" = 1 ] || echo "  nothing to remove"
+
+dbg="$target/debug"
+min=$((DAYS * 1440))
+echo "devvm $dbg (unread for ${DAYS}d):"
+# Files in deps/ and examples/ go one by one; build/<pkg>-<hash>/ only whole: a
+# kept `output` whose out/ files are gone breaks the build.
+stale() {
+  [ -d "$dbg/incremental" ] && echo "$dbg/incremental" # the scripts build with CARGO_INCREMENTAL=0
+  find "$dbg/deps" "$dbg/examples" -type f -amin +"$min" 2>/dev/null
+  for d in "$dbg"/build/*/; do
+    [ -d "$d" ] && [ -z "$(find "$d" -type f -amin -"$min" -print -quit)" ] && echo "${d%/}"
+  done
+}
+if [ ! -f "$target/CACHEDIR.TAG" ] || [ ! -d "$dbg" ]; then
+  echo "  no cargo target dir at $target"
+elif pgrep -x cargo >/dev/null; then
+  echo "  skipped: cargo is running"
+else
+  echo "  size before: $(du -sh "$dbg" | cut -f1)"
+  list="$(mktemp)"
+  stale >"$list"
+  if [ "$DRY" = 1 ]; then
+    echo "  would remove $(wc -l <"$list") paths, $(tr '\n' '\0' <"$list" | du -csh --files0-from=- | tail -1 | cut -f1)"
+  else
+    tr '\n' '\0' <"$list" | xargs -0 -r rm -rf
+    echo "  removed $(wc -l <"$list") paths"
+    echo "  size after:  $(du -sh "$dbg" | cut -f1)"
+  fi
+  rm -f "$list"
+fi
 echo "free after:  $(free)"
 REMOTE
 }
