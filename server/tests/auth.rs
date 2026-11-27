@@ -369,8 +369,9 @@ async fn lockout_after_ten_failures() {
     }
     // Let the per-minute window clear so only the lockout can answer now.
     srv.set_clock(t0 + 2 * MIN);
-    // Even the right key is refused while locked.
-    let res = login_device(&srv, &acct, &dev, &acct.auth_key).await;
+    // Even the right key is refused while locked (without the device's
+    // secret, which proves the request is the account's own).
+    let res = login_device_with(&srv, "dave", &dev, None, &acct.auth_key).await;
     assert_err(&res, 429, ErrorCode::RateLimited);
     // Recovery login shares the lock.
     let rec = RecoverReq {
@@ -386,7 +387,7 @@ async fn lockout_after_ten_failures() {
     // It lasts fifteen minutes from the tenth failure.
     srv.set_clock(t0 + 40_000 + 14 * MIN);
     assert_err(
-        &login_device(&srv, &acct, &dev, &acct.auth_key).await,
+        &login_device_with(&srv, "dave", &dev, None, &acct.auth_key).await,
         429,
         ErrorCode::RateLimited,
     );
@@ -407,6 +408,73 @@ async fn lockout_after_ten_failures() {
             .await
             .unwrap();
     assert!(locked > srv.state.now_ms());
+}
+
+#[tokio::test]
+async fn a_stranger_cannot_lock_the_account_out_of_its_own_devices() {
+    let srv = spawn().await;
+    let acct = register(&srv, "victim").await;
+    let dev = acct.tokens.device_id.clone();
+    let link = make_link(&srv, &acct.tokens.access_token).await;
+    let t0 = now_ms() + 2 * MIN;
+    srv.set_clock(t0);
+    // Someone who only knows the username: ten wrong keys lock it and fill
+    // the username's window.
+    for i in 0..10 {
+        let res = login_device_with(&srv, "victim", &dev, None, &[9; 32]).await;
+        assert_err(&res, 401, ErrorCode::Unauthorized);
+        srv.set_clock(t0 + (i + 1) * 1_000);
+    }
+    assert_err(
+        &login_device_with(&srv, "victim", &dev, None, &acct.auth_key).await,
+        429,
+        ErrorCode::RateLimited,
+    );
+    assert_err(&prelogin(&srv, "victim").await, 429, ErrorCode::RateLimited);
+
+    // The account's own device still gets through: prelogin naming it...
+    let body = serde_json::to_vec(&PreloginReq {
+        username: "victim".into(),
+    })
+    .unwrap();
+    let res = srv
+        .request(
+            "POST",
+            "/v1/prelogin",
+            &[
+                ("Content-Type", "application/json"),
+                ("X-Tether-Device", &dev),
+            ],
+            Some(body),
+        )
+        .await;
+    assert_eq!(res.status, 200);
+    // ...and login with its secret and the right key.
+    let res = login_device(&srv, &acct, &dev, &acct.auth_key).await;
+    assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+    // So does a new device with an add-device code.
+    let res = login_link(
+        &srv,
+        "victim",
+        &acct.auth_key,
+        code_token(&link.code),
+        "New",
+    )
+    .await;
+    assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+
+    // Recovery carries no such proof: still locked once the window clears.
+    srv.set_clock(t0 + 2 * MIN);
+    let rec = RecoverReq {
+        username: "victim".into(),
+        recovery_auth_key: acct.recovery_key.clone(),
+        device: device("x"),
+    };
+    assert_err(
+        &srv.post_json("/v1/recover-login", &rec).await,
+        429,
+        ErrorCode::RateLimited,
+    );
 }
 
 #[tokio::test]

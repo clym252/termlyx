@@ -10,10 +10,11 @@ use std::time::Duration;
 use argon2::{Algorithm, Argon2, Params, Version};
 use axum::Json;
 use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::routing::post;
 use core_proto::{
-    AccountMaterial, CodeVerifyReq, CodeVerifyResp, DeviceInfo, ErrorCode, KdfWire, PreloginReq,
-    PreloginResp, RegisterReq, TokenResp,
+    AccountMaterial, CodeVerifyReq, CodeVerifyResp, DeviceInfo, ErrorCode, HEADER_DEVICE, KdfWire,
+    PreloginReq, PreloginResp, RegisterReq, TokenResp,
 };
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::{Digest, Sha256};
@@ -251,11 +252,33 @@ pub fn fake_kdf(server_secret: &[u8; 32], username: &str) -> KdfWire {
 async fn prelogin(
     State(st): State<AppState>,
     ClientIp(ip): ClientIp,
+    headers: HeaderMap,
     Json(req): Json<PreloginReq>,
 ) -> ApiResult<Json<PreloginResp>> {
     let username = normalize_username(&req.username)?;
-    st.limiter
-        .check_attempt(ip, &username, st.now_ms(), &st.limits)?;
+    // One of the account's own devices skips the username window, which
+    // anyone who knows the name could keep full. Device ids are not secret,
+    // but prelogin hands out nothing a stranger cannot already get.
+    let device = headers.get(HEADER_DEVICE).and_then(|v| v.to_str().ok());
+    let own: Option<i64> = match device {
+        Some(d) => {
+            sqlx::query_scalar(
+                "SELECT 1 FROM devices d JOIN accounts a ON a.id = d.account_id \
+                 WHERE a.username = ? AND d.id = ? AND d.revoked = 0",
+            )
+            .bind(&username)
+            .bind(d)
+            .fetch_optional(&st.db)
+            .await?
+        }
+        None => None,
+    };
+    if own.is_some() {
+        st.limiter.check_ip(ip, st.now_ms(), &st.limits)?;
+    } else {
+        st.limiter
+            .check_attempt(ip, &username, st.now_ms(), &st.limits)?;
+    }
     let row: Option<(i64, i64, i64, Vec<u8>)> =
         sqlx::query_as("SELECT kdf_m_kib, kdf_t, kdf_p, kdf_salt FROM accounts WHERE username = ?")
             .bind(&username)

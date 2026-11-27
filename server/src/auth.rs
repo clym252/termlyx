@@ -482,15 +482,24 @@ pub(crate) enum Secret {
 ///
 /// An unknown username and a wrong key are indistinguishable: the same
 /// error, the same Argon2 work (against a dummy verifier), the same lockout.
+///
+/// `proven` (see [`device_proof`]) skips the per-username window and the
+/// lockout, so a stranger who knows the username cannot keep the account's
+/// own devices out. The address windows and the Argon2 check still apply.
 async fn check_credentials(
     st: &AppState,
     ip: ClientIp,
     username: &str,
     key: [u8; 32],
     which: Secret,
+    proven: bool,
 ) -> ApiResult<String> {
     let now = st.now_ms();
-    st.limiter.check_attempt(ip.0, username, now, &st.limits)?;
+    if proven {
+        st.limiter.check_ip(ip.0, now, &st.limits)?;
+    } else {
+        st.limiter.check_attempt(ip.0, username, now, &st.limits)?;
+    }
 
     type Row = (
         String,
@@ -519,7 +528,7 @@ async fn check_credentials(
         return Err(wrong_credentials());
     };
 
-    if locked_until > now {
+    if locked_until > now && !proven {
         return Err(ApiError::of(ErrorCode::RateLimited));
     }
     let stored = match which {
@@ -538,6 +547,49 @@ async fn check_credentials(
         ));
     }
     Ok(id)
+}
+
+/// Does a sign-in for `username` carry proof that it comes from the account
+/// itself: a live add-device code of the account (`link`), or the id and
+/// secret of one of its devices that is not revoked? Unlike the username,
+/// neither is known to strangers.
+async fn device_proof(
+    st: &AppState,
+    username: &str,
+    headers: &HeaderMap,
+    link: Option<&[u8; 32]>,
+    now: i64,
+) -> ApiResult<bool> {
+    if let Some(token) = link {
+        let live: Option<i64> = sqlx::query_scalar(
+            "SELECT 1 FROM link_tokens l JOIN accounts a ON a.id = l.account_id \
+             WHERE a.username = ? AND l.hash = ? AND l.used_at IS NULL AND l.expires_at > ?",
+        )
+        .bind(username)
+        .bind(Sha256::digest(token).to_vec())
+        .bind(now)
+        .fetch_optional(&st.db)
+        .await?;
+        return Ok(live.is_some());
+    }
+    let header = |name| headers.get(name).and_then(|v| v.to_str().ok());
+    let (Some(device_id), Some(presented)) = (
+        header(HEADER_DEVICE),
+        header(HEADER_DEVICE_SECRET).and_then(token_hash),
+    ) else {
+        return Ok(false);
+    };
+    let stored: Option<Option<Vec<u8>>> = sqlx::query_scalar(
+        "SELECT d.secret_hash FROM devices d JOIN accounts a ON a.id = d.account_id \
+         WHERE a.username = ? AND d.id = ? AND d.revoked = 0",
+    )
+    .bind(username)
+    .bind(device_id)
+    .fetch_optional(&st.db)
+    .await?;
+    Ok(
+        matches!(stored, Some(Some(h)) if h.len() == presented.len() && bool::from(h.ct_eq(&presented))),
+    )
 }
 
 /// Count a failed sign-in for a real account. Failures are "consecutive" within
@@ -671,8 +723,9 @@ async fn login(
         .map(|t| fixed::<32>("linkToken", t))
         .transpose()?;
 
-    let account_id = check_credentials(&st, ip, &username, key, Secret::Auth).await?;
     let now = st.now_ms();
+    let proven = device_proof(&st, &username, &headers, link.as_ref(), now).await?;
+    let account_id = check_credentials(&st, ip, &username, key, Secret::Auth, proven).await?;
 
     // Without a link code only an existing device of this account may sign in
     // again, and it must prove it is that device: device ids are not secret,
@@ -784,7 +837,7 @@ async fn recover_login(
 ) -> ApiResult<Json<TokenResp>> {
     let username = normalize_username(&req.username)?;
     let key = fixed::<32>("recoveryAuthKey", &req.recovery_auth_key)?;
-    let account_id = check_credentials(&st, ip, &username, key, Secret::Recovery).await?;
+    let account_id = check_credentials(&st, ip, &username, key, Secret::Recovery, false).await?;
 
     let now = st.now_ms();
     let mut tx = db::begin_write(&st.db).await?;

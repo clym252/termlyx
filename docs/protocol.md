@@ -236,7 +236,13 @@ response bodies are the `core-proto` types named in the table below.
   is stored in the database and survives a restart. Unknown usernames follow
   the same rules in memory (so a locked account looks like any other name),
   bounded to 100 000 names with the oldest evicted first; **their counts and
-  locks are lost when the server restarts**.
+  locks are lost when the server restarts**. Usernames are not secret, so a
+  request that proves it comes from the account itself skips the per-username
+  window and the lock (not the per-address window, and not the key check):
+  `login` with the secret of one of the account's devices that is not revoked,
+  or with a live link token of the account, and `prelogin` naming one of its
+  devices in `X-Tether-Device`. `recover-login` has no such proof and stays
+  locked.
 * **No enumeration.** `prelogin` answers an unknown username with production
   default KDF parameters (`m` 65536 KiB, `t` 3, `p` 4) and a stable salt
   `HMAC-SHA256(server_secret, "prelogin|" + username)[..16]`: same shape, same
