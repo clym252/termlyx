@@ -34,7 +34,7 @@ keyring = "4.2.0"
 keyring-core = "1.0.1"
 async-trait = { workspace = true }
 tracing = { workspace = true }
-ssh2-config = "0.8.2"
+ssh2-config = "0.9.0"
 
 # Local terminals (local_pty.rs); iOS and Android have none.
 [target.'cfg(not(any(target_os = "ios", target_os = "android")))'.dependencies]
