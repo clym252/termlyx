@@ -18,7 +18,7 @@ use core_model::Id;
 use core_proto::{
     AccountResp, CodeKind, CodeProof, CodeVerifyReq, DeviceInfo, ErrorCode, JoinCode, LoginReq,
     PasswordChangeReq, PreloginReq, RecoverReq, RecoveryResetReq, RegisterReq, ShortCode,
-    TokenResp, client_proof, parse_address, verify_server_proof,
+    TokenResp, client_proof, host_binding, parse_address, verify_server_proof,
 };
 use secrecy::{ExposeSecret, SecretString};
 
@@ -310,12 +310,35 @@ pub struct ServerCheck {
     pub url: String,
     /// The pin to connect with; `None` when the certificate passed WebPKI.
     pub pin: Option<Pin>,
+    /// The typed `host:port` an unpinned proof is bound to.
+    host: String,
     client_nonce: [u8; 32],
 }
 
-/// The proof binding: the pin when pinned, else empty (spec "TLS").
-fn binding(pin: &Option<Pin>) -> &[u8] {
-    pin.as_ref().map_or(&[], |p| p.as_bytes())
+/// The proof binding (spec "Short codes"): the pin when pinned, else the
+/// typed `host:port`, which the server checks is one of its own addresses.
+fn binding<'a>(pin: &'a Option<Pin>, host: &'a str) -> &'a [u8] {
+    pin.as_ref().map_or(host.as_bytes(), |p| p.as_bytes())
+}
+
+/// Checks the server's proof over [`binding`]. An unpinned proof over the
+/// empty binding comes from a server too old to bind the host (or a relay
+/// that dropped it): refused as [`SyncError::UpdateServer`], since accepting
+/// it would let a look-alike address relay the real server's proof.
+fn check_server_proof(
+    key: &[u8; 32],
+    pin: &Option<Pin>,
+    host: &str,
+    client_nonce: &[u8; 32],
+    got: &[u8],
+) -> Result<(), SyncError> {
+    if verify_server_proof(key, binding(pin, host), client_nonce, got) {
+        Ok(())
+    } else if pin.is_none() && verify_server_proof(key, &[], client_nonce, got) {
+        Err(SyncError::UpdateServer)
+    } else {
+        Err(SyncError::ServerUnverified)
+    }
 }
 
 /// Checks that the server at `address` (`host`, `host:port`, ...) knows
@@ -325,6 +348,7 @@ fn binding(pin: &Option<Pin>) -> &[u8] {
 /// without the endpoint is [`SyncError::UpdateServer`].
 pub async fn check_server(address: &str, code: &ShortCode) -> Result<ServerCheck, SyncError> {
     let url = parse_address(address)?;
+    let host = host_binding(&url);
     let pin = tls::probe(&url).await?.pin;
     let client = first_contact(&url, pin).await?;
     let client_nonce = *core_crypto::keys::random_key().expose_secret();
@@ -333,19 +357,14 @@ pub async fn check_server(address: &str, code: &ShortCode) -> Result<ServerCheck
             code_id: code.id().to_vec(),
             client_nonce: client_nonce.to_vec(),
             pinned: pin.is_some(),
+            host: pin.is_none().then(|| host.clone()),
         })
         .await?;
-    if !verify_server_proof(
-        &code.key(),
-        binding(&pin),
-        &client_nonce,
-        &resp.server_proof,
-    ) {
-        return Err(SyncError::ServerUnverified);
-    }
+    check_server_proof(&code.key(), &pin, &host, &client_nonce, &resp.server_proof)?;
     Ok(ServerCheck {
         url,
         pin,
+        host,
         client_nonce,
     })
 }
@@ -368,7 +387,13 @@ pub async fn enable_with_short_code(
         code_id: code.id().to_vec(),
         client_nonce: check.client_nonce.to_vec(),
         pinned: check.pin.is_some(),
-        proof: client_proof(&code.key(), binding(&check.pin), &check.client_nonce).to_vec(),
+        host: check.pin.is_none().then(|| check.host.clone()),
+        proof: client_proof(
+            &code.key(),
+            binding(&check.pin, &check.host),
+            &check.client_nonce,
+        )
+        .to_vec(),
     };
     enable_at(
         vault,
@@ -1031,5 +1056,36 @@ mod tests {
     #[test]
     fn a_long_host_name_is_cut_to_100_characters() {
         assert_eq!(device_name(&"a".repeat(300), "x").chars().count(), 100);
+    }
+
+    #[test]
+    fn unpinned_proofs_must_be_bound_to_the_typed_host() {
+        use super::{Pin, SyncError, check_server_proof};
+        use core_proto::server_proof;
+        let (key, nonce, host) = ([1; 32], [2; 32], "sync.example.com:443");
+        let check = |pin: &Option<Pin>, proof: [u8; 32]| {
+            check_server_proof(&key, pin, host, &nonce, &proof)
+        };
+        // Unpinned: bound to what the user typed.
+        assert_eq!(check(&None, server_proof(&key, host.as_bytes(), &nonce)), Ok(()));
+        // A server that ignored the host (older, or a relay dropped it).
+        assert_eq!(
+            check(&None, server_proof(&key, &[], &nonce)),
+            Err(SyncError::UpdateServer)
+        );
+        // Bound to another address (a relay rewrote the host).
+        assert_eq!(
+            check(&None, server_proof(&key, b"other.example:443", &nonce)),
+            Err(SyncError::ServerUnverified)
+        );
+        // Pinned: bound to the pin, never the host or nothing.
+        let pin = Some(Pin::new([9; 32]));
+        assert_eq!(check(&pin, server_proof(&key, &[9; 32], &nonce)), Ok(()));
+        for other in [host.as_bytes(), &[]] {
+            assert_eq!(
+                check(&pin, server_proof(&key, other, &nonce)),
+                Err(SyncError::ServerUnverified)
+            );
+        }
     }
 }

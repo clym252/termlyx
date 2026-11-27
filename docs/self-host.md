@@ -360,6 +360,12 @@ challenge (works for a name that only resolves on your network) or Tailscale
 serve. A certificate from your own CA or a self-signed proxy certificate does
 not work.
 
+Setup and invite short codes work only at the address in `TERMLYX_URL` (or a
+name in `TERMLYX_NAMES` / `TERMLYX_IPS`): the server refuses to vouch for any
+other address, so a look-alike address cannot pass its codes on. A proxy in
+front of the default self-signed mode (instead of `off`) also needs
+`TERMLYX_BEHIND_PROXY: "1"`.
+
 ### Testing overrides
 
 The install scripts read `TERMLYX_RELEASE_BASE` (where `compose.yml` is

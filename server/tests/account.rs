@@ -1263,18 +1263,37 @@ fn code_req(code: &ShortCode, username: &str, binding: &[u8], pinned: bool) -> R
             code_id: code.id().to_vec(),
             client_nonce: NONCE.to_vec(),
             pinned,
+            host: None,
             proof: client_proof(&code.key(), binding, &NONCE).to_vec(),
         }),
     }
 }
 
 async fn verify(srv: &TestServer, code: &ShortCode, pinned: bool) -> Response {
+    verify_at(srv, code, pinned, None).await
+}
+
+/// [`verify`] from a client that typed `host` (`host:port`).
+async fn verify_at(
+    srv: &TestServer,
+    code: &ShortCode,
+    pinned: bool,
+    host: Option<&str>,
+) -> Response {
     let req = CodeVerifyReq {
         code_id: code.id().to_vec(),
         client_nonce: NONCE.to_vec(),
         pinned,
+        host: host.map(String::from),
     };
     srv.post_json("/v1/code/verify", &req).await
+}
+
+/// [`code_req`] with an unpinned proof bound to `host`.
+fn code_req_at(code: &ShortCode, username: &str, host: &str) -> RegisterReq {
+    let mut req = code_req(code, username, host.as_bytes(), false);
+    req.code_proof.as_mut().unwrap().host = Some(host.into());
+    req
 }
 
 #[tokio::test]
@@ -1354,6 +1373,7 @@ async fn unknown_code_id_is_invite_invalid() {
         code_id: vec![1; 15],
         client_nonce: NONCE.to_vec(),
         pinned: true,
+        host: None,
     };
     assert_err(
         &srv.post_json("/v1/code/verify", &bad).await,
@@ -1430,6 +1450,107 @@ async fn unpinned_proof_on_plain_server_registers() {
     ));
     let res = srv
         .post_json("/v1/register", &code_req(&code, "alice", &[], false))
+        .await;
+    assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+}
+
+#[tokio::test]
+async fn self_signed_server_refuses_unpinned_proofs() {
+    // Clients reaching a self-signed server directly always pin; an unpinned
+    // client was shown some other (publicly trusted) certificate.
+    let srv = spawn_tls().await;
+    let code = short_code(&srv).await;
+    for host in [None, Some("localhost:8443")] {
+        assert_err(
+            &verify_at(&srv, &code, false, host).await,
+            403,
+            ErrorCode::InviteInvalid,
+        );
+    }
+    for req in [
+        code_req(&code, "alice", &[], false),
+        code_req_at(&code, "alice", "localhost:8443"),
+    ] {
+        assert_err(
+            &srv.post_json("/v1/register", &req).await,
+            403,
+            ErrorCode::InviteInvalid,
+        );
+    }
+
+    // Behind a TLS proxy the operator opts in.
+    let srv = spawn_with(|c| {
+        c.tls = tether_server::TlsMode::SelfSigned;
+        c.names = vec!["localhost".into()];
+        c.public_url = Some("https://sync.example.com".into());
+        c.behind_proxy = true;
+    })
+    .await;
+    let code = short_code(&srv).await;
+    let res = verify_at(&srv, &code, false, Some("sync.example.com:443")).await;
+    assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+    let res = srv
+        .post_json(
+            "/v1/register",
+            &code_req_at(&code, "alice", "sync.example.com:443"),
+        )
+        .await;
+    assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+}
+
+#[tokio::test]
+async fn unpinned_proof_binds_to_a_served_host() {
+    let srv = spawn_with(|c| {
+        c.names = vec!["*.lan.example".into()];
+        c.public_url = Some("https://Sync.Example.com".into());
+    })
+    .await;
+    let code = short_code(&srv).await;
+    for host in ["sync.example.com:443", "nas.lan.example:8443", "127.0.0.1:9"] {
+        let res = verify_at(&srv, &code, false, Some(host)).await;
+        assert_eq!(res.status, 200, "{host}: {}", String::from_utf8_lossy(&res.body));
+        let resp: CodeVerifyResp = res.json();
+        assert!(verify_server_proof(
+            &code.key(),
+            host.as_bytes(),
+            &NONCE,
+            &resp.server_proof
+        ));
+        assert!(!verify_server_proof(
+            &code.key(),
+            &[],
+            &NONCE,
+            &resp.server_proof
+        ));
+    }
+    // A look-alike address the user was talked into typing: the real server
+    // refuses to vouch for it.
+    for host in ["sync.example.co:443", "a.b.lan.example:8443", "nohost"] {
+        assert_err(
+            &verify_at(&srv, &code, false, Some(host)).await,
+            403,
+            ErrorCode::InviteInvalid,
+        );
+        assert_err(
+            &srv.post_json("/v1/register", &code_req_at(&code, "alice", host))
+                .await,
+            403,
+            ErrorCode::InviteInvalid,
+        );
+    }
+    // A proof over the empty binding does not pass for a host-bound one.
+    let mut req = code_req(&code, "alice", &[], false);
+    req.code_proof.as_mut().unwrap().host = Some("sync.example.com:443".into());
+    assert_err(
+        &srv.post_json("/v1/register", &req).await,
+        403,
+        ErrorCode::InviteInvalid,
+    );
+    let res = srv
+        .post_json(
+            "/v1/register",
+            &code_req_at(&code, "alice", "sync.example.com:443"),
+        )
         .await;
     assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
 }

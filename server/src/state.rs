@@ -163,6 +163,10 @@ pub struct AppState {
     /// SPKI pin of the served certificate (`self-signed` and `files`), the
     /// binding of pinned short-code proofs; `None` with TLS off.
     pub own_spki: Option<[u8; 32]>,
+    /// Hosts this server answers as (lowercase, IPs canonical): certificate
+    /// SANs, `names`, `ips` and the public URL's host. Unpinned short-code
+    /// proofs must be bound to one of them.
+    pub code_hosts: Arc<Vec<String>>,
     /// Database identity from `meta`; see [`crate::db::Meta`].
     pub epoch: String,
     /// Keys the fake-prelogin HMAC (from `meta.server_secret`).
@@ -185,6 +189,7 @@ impl AppState {
             limiter: Arc::new(RateLimiter::default()),
             code_pin: None,
             own_spki: None,
+            code_hosts: Arc::default(),
             epoch: meta.epoch,
             server_secret: Arc::new(meta.server_secret),
             clock: clock.unwrap_or_else(system_clock),

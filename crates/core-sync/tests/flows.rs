@@ -942,6 +942,7 @@ async fn short_code_enable_end_to_end() {
                 code_id: code.id().to_vec(),
                 client_nonce: vec![7; 32],
                 pinned: true,
+                host: None,
             },
         )
         .await;

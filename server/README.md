@@ -69,9 +69,13 @@ put a URL into a code that clients would reject (plain `http://`).
   non-loopback address needs `TERMLYX_ALLOW_PLAIN=1`. Set `TERMLYX_URL` to the
   proxy's `https://` address.
 
+A `self-signed` server behind a TLS proxy (clients see the proxy's certificate,
+not the server's) also needs `TERMLYX_BEHIND_PROXY=1`, or setup and invite
+short codes are refused: a client reaching the server directly always pins it.
+
 Certificate files must be inside the data volume. The same settings can live in
 `/data/server.toml` (keys `tls`, `tls_cert`, `tls_key`, `url`, `bind`, `names`,
-`ips`, `allow_plain_remote`); the environment wins.
+`ips`, `allow_plain_remote`, `behind_proxy`); the environment wins.
 
 ## Backup and restore
 

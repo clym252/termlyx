@@ -11,11 +11,12 @@
 //! | `TERMLYX_IPS` | comma list of IPs for the certificate | none |
 //! | `TERMLYX_URL` | public URL put into full codes | `https://{first name}` if names are set, else none |
 //! | `TERMLYX_ALLOW_PLAIN` | allow `off` on a non-loopback address | `false` |
+//! | `TERMLYX_BEHIND_PROXY` | `self-signed` behind a TLS proxy: accept short codes redeemed without the pin | `false` |
 //!
 //! Every variable is also read as `TETHER_X` when `TERMLYX_X` is unset.
 //!
 //! `server.toml` uses the lowercase keys `bind`, `tls`, `tls_cert`, `tls_key`,
-//! `names`, `ips`, `url`, `allow_plain_remote`. The data directory itself can
+//! `names`, `ips`, `url`, `allow_plain_remote`, `behind_proxy`. The data directory itself can
 //! only come from the environment.
 
 use std::net::{IpAddr, SocketAddr};
@@ -85,6 +86,10 @@ pub struct Config {
     pub public_url: Option<String>,
     /// Allow `TlsMode::Off` on a non-loopback address.
     pub allow_plain_remote: bool,
+    /// A TLS proxy fronts a `SelfSigned` server, so clients see the proxy's
+    /// certificate and redeem short codes unpinned. Without it such proofs
+    /// are refused: clients reaching this server directly always pin.
+    pub behind_proxy: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -98,6 +103,7 @@ struct FileConfig {
     ips: Option<Vec<String>>,
     url: Option<String>,
     allow_plain_remote: Option<bool>,
+    behind_proxy: Option<bool>,
 }
 
 fn invalid(name: &'static str, reason: impl ToString) -> ConfigError {
@@ -135,6 +141,7 @@ impl Config {
             ips: vec![],
             public_url: None,
             allow_plain_remote: false,
+            behind_proxy: false,
         }
     }
 
@@ -226,6 +233,11 @@ impl Config {
             None => file.allow_plain_remote.unwrap_or(false),
         };
 
+        let behind_proxy = match get("TERMLYX_BEHIND_PROXY") {
+            Some(v) => parse_bool("TERMLYX_BEHIND_PROXY", &v)?,
+            None => file.behind_proxy.unwrap_or(false),
+        };
+
         // Explicit names keep the legacy `https://{first name}` default so
         // existing deployments keep making the same codes.
         let public_url = get("TERMLYX_URL")
@@ -240,6 +252,7 @@ impl Config {
             ips,
             public_url,
             allow_plain_remote,
+            behind_proxy,
         };
         cfg.check()?;
         Ok(cfg)
@@ -293,6 +306,13 @@ mod tests {
         assert_eq!(c.names, ["termlyx", "localhost"]);
         assert_eq!(c.public_url, None);
         assert!(!c.allow_plain_remote);
+        assert!(!c.behind_proxy);
+        let c = Config::from_lookup(lookup(&[
+            ("TERMLYX_DATA", dir.path().to_str().unwrap()),
+            ("TERMLYX_BEHIND_PROXY", "1"),
+        ]))
+        .unwrap();
+        assert!(c.behind_proxy);
         assert_eq!(
             Config::from_lookup(lookup(&[("HOME", "/h")]))
                 .unwrap()

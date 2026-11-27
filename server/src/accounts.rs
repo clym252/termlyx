@@ -302,13 +302,69 @@ fn invite_invalid() -> ApiError {
 }
 
 /// Proof binding for a short code: the served certificate's SPKI pin when the
-/// client pinned, else empty. A pin claim with TLS off cannot be honoured.
-fn code_binding(st: &AppState, pinned: bool) -> ApiResult<Vec<u8>> {
+/// client pinned (impossible with TLS off), else the `host:port` the client
+/// typed, which must name this server. Unpinned proofs without a host come
+/// from older clients and bind to nothing.
+fn code_binding(st: &AppState, pinned: bool, host: Option<&str>) -> ApiResult<Vec<u8>> {
     match (pinned, st.own_spki) {
-        (false, _) => Ok(Vec::new()),
         (true, Some(pin)) => Ok(pin.to_vec()),
         (true, None) => Err(invite_invalid()),
+        // Direct clients of a self-signed server always pin: an unpinned one
+        // was shown some other certificate.
+        (false, _) if st.code_pin.is_some() && !st.cfg.behind_proxy => Err(invite_invalid()),
+        (false, _) => match host {
+            None => Ok(Vec::new()),
+            Some(h) if serves_host(st, h) => Ok(h.as_bytes().to_vec()),
+            Some(_) => Err(invite_invalid()),
+        },
     }
+}
+
+/// `host` (DNS name, IPv4, or IPv6 with or without brackets) as
+/// [`AppState::code_hosts`] holds it: lowercase, IPs canonical.
+fn norm_host(host: &str) -> String {
+    let h = host
+        .strip_prefix('[')
+        .and_then(|h| h.strip_suffix(']'))
+        .unwrap_or(host);
+    h.parse::<std::net::IpAddr>()
+        .map_or_else(|_| h.to_ascii_lowercase(), |ip| ip.to_string())
+}
+
+/// [`AppState::code_hosts`] for `cfg` and the served certificate's SANs.
+pub(crate) fn code_hosts(cfg: &crate::config::Config, cert_names: &[String]) -> Vec<String> {
+    let public = cfg
+        .public_url
+        .as_deref()
+        .and_then(|u| core_proto::parse_address(u).ok())
+        .map(|u| core_proto::host_binding(&u))
+        .and_then(|b| b.rsplit_once(':').map(|(h, _)| h.to_owned()));
+    let mut out: Vec<String> = cert_names
+        .iter()
+        .chain(&cfg.names)
+        .cloned()
+        .chain(cfg.ips.iter().map(ToString::to_string))
+        .chain(public)
+        .map(|h| norm_host(&h))
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Does `binding` (`host:port`) name this server: one of its hosts, a
+/// wildcard certificate name covering it, or loopback?
+fn serves_host(st: &AppState, binding: &str) -> bool {
+    let Some((host, _port)) = binding.rsplit_once(':') else {
+        return false;
+    };
+    let host = norm_host(host);
+    let wildcard_parent = host.split_once('.').map(|(_, parent)| parent);
+    host == "localhost"
+        || host.parse::<std::net::IpAddr>().is_ok_and(|ip| ip.is_loopback())
+        || st.code_hosts.iter().any(|n| {
+            *n == host || n.strip_prefix("*.").is_some_and(|p| Some(p) == wildcard_parent)
+        })
 }
 
 /// The key (`token_hash`) of the unused, unexpired invite with `code_id`.
@@ -338,7 +394,7 @@ async fn code_verify(
 ) -> ApiResult<Json<CodeVerifyResp>> {
     let code_id: [u8; 16] = code_field(&req.code_id)?;
     let nonce: [u8; 32] = code_field(&req.client_nonce)?;
-    let binding = code_binding(&st, req.pinned)?;
+    let binding = code_binding(&st, req.pinned, req.host.as_deref())?;
     let now = st.now_ms();
     // Per code id, so a stranger cannot block setup without the id; '#' is
     // never in a username.
@@ -370,7 +426,7 @@ async fn register(
             code_field::<16>(&p.code_id)?,
             code_field::<32>(&p.client_nonce)?,
             code_field::<32>(&p.proof)?,
-            code_binding(&st, p.pinned)?,
+            code_binding(&st, p.pinned, p.host.as_deref())?,
         )),
         None => None,
     };
