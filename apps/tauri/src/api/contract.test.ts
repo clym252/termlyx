@@ -177,7 +177,8 @@ describe.each([["mock", () => createMockApi()]])("TetherApi contract (%s)", (_na
     const key = await api.keyGenerate("ed25519", "laptop");
     expect(key.fingerprint).toMatch(/^SHA256:/);
     expect(JSON.stringify(await api.listEntities("ssh_key"))).not.toContain("PRIVATE KEY");
-    const exported = await api.keyExportPrivate(key.id);
+    expect((await apiError(api.keyExportPrivate(key.id, "nope"))).code).toBe("wrongPassword");
+    const exported = await api.keyExportPrivate(key.id, "pw");
     expect(exported.privateOpenssh).toContain("PRIVATE KEY");
     const identity = await api.upsertEntity("identity", {
       label: "k",
@@ -192,7 +193,7 @@ describe.each([["mock", () => createMockApi()]])("TetherApi contract (%s)", (_na
     const api = make();
     await api.vaultCreate("pw");
     const plain = await api.keyGenerate("ed25519", "plain");
-    const plainText = (await api.keyExportPrivate(plain.id)).privateOpenssh;
+    const plainText = (await api.keyExportPrivate(plain.id, "pw")).privateOpenssh;
     // A passphrase for an unencrypted key is ignored.
     const reimported = await api.keyImport(plainText, "ignored");
     expect(reimported.hasPassphrase).toBe(false);
@@ -200,7 +201,7 @@ describe.each([["mock", () => createMockApi()]])("TetherApi contract (%s)", (_na
 
     const locked = await api.keyGenerate("ed25519", "locked", "kp");
     expect(locked.hasPassphrase).toBe(true);
-    const lockedText = (await api.keyExportPrivate(locked.id)).privateOpenssh;
+    const lockedText = (await api.keyExportPrivate(locked.id, "pw")).privateOpenssh;
     expect((await apiError(api.keyImport(lockedText))).code).toBe("needsPassphrase");
     expect((await apiError(api.keyImport(lockedText, "nope"))).code).toBe("badPassphrase");
     const again = await api.keyImport(lockedText, "kp");

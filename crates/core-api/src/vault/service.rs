@@ -270,6 +270,17 @@ impl VaultService {
         self.set_unlocked(open_account(&acct, &secret)?)
     }
 
+    /// Checks the master password of the unlocked vault without changing the
+    /// session: the re-authentication before a sensitive action (exporting
+    /// a private key). [`VaultError::Locked`] when locked,
+    /// [`VaultError::WrongPassword`] on a mismatch. Blocking (the KDF).
+    pub fn verify_password(&self, password: &SecretString) -> Result<(), VaultError> {
+        if self.unlocked.is_none() {
+            return Err(VaultError::Locked);
+        }
+        self.open_by_password(password).map(|_| ())
+    }
+
     /// Unlocks with the recovery key and sets a new master password (fresh
     /// salt). The recovery key keeps working afterwards. Blocking; see the
     /// type docs.

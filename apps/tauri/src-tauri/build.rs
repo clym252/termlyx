@@ -35,6 +35,7 @@ const COMMANDS: &[&str] = &[
     "key_generate",
     "key_import",
     "key_export_private",
+    "key_save_private",
     "known_hosts_import",
     // sync, password change, conflicts
     "sync_status",

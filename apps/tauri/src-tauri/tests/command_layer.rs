@@ -1816,6 +1816,52 @@ fn login_name_falls_back_user_logname_username() {
 }
 
 #[tokio::test]
+async fn key_save_private_writes_the_picked_file_after_the_password() {
+    let h = harness();
+    created(&h).await;
+    let key = h
+        .state
+        .key_generate(KeyAlgoDto::Ed25519, "work laptop".into(), None)
+        .await
+        .unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("saved");
+
+    // A wrong password fails before the dialog opens.
+    let err = h
+        .state
+        .key_save_private(key.id, secret("wrong"), |_| panic!("no dialog"))
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(err.code, "wrongPassword");
+    // Cancelled: nothing written.
+    let cancelled = h
+        .state
+        .key_save_private(key.id, secret("master-pw"), |_| None)
+        .await
+        .unwrap();
+    assert_eq!(cancelled, None);
+    assert!(!path.exists());
+
+    let target = path.clone();
+    let saved = h
+        .state
+        .key_save_private(key.id, secret("master-pw"), move |name| {
+            assert_eq!(name, "work_laptop");
+            Some(target)
+        })
+        .await
+        .unwrap();
+    assert_eq!(saved.as_deref(), Some(path.as_path()));
+    assert!(
+        std::fs::read_to_string(&path)
+            .unwrap()
+            .contains("BEGIN OPENSSH PRIVATE KEY")
+    );
+}
+
+#[tokio::test]
 async fn keys_generate_import_export() {
     let h = harness();
     created(&h).await;
@@ -1831,7 +1877,19 @@ async fn keys_generate_import_export() {
     assert_eq!(listed.len(), 1);
     assert!(!Value::Array(listed).to_string().contains("PRIVATE KEY"));
 
-    let exported = h.state.key_export_private(generated.id).await.unwrap();
+    // Export asks for the master password again.
+    let err = h
+        .state
+        .key_export_private(generated.id, secret("wrong"))
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(err.code, "wrongPassword");
+    let exported = h
+        .state
+        .key_export_private(generated.id, secret("master-pw"))
+        .await
+        .unwrap();
     assert!(
         exported
             .private_openssh
@@ -1870,7 +1928,7 @@ async fn keys_generate_import_export() {
         .unwrap();
     let locked_text = h
         .state
-        .key_export_private(locked.id)
+        .key_export_private(locked.id, secret("master-pw"))
         .await
         .unwrap()
         .private_openssh;
@@ -2405,8 +2463,18 @@ async fn sync_enable_and_status() {
         "invalidCode"
     );
     // A short code names no server yet; a bad address is its own error.
-    let short = h.state.sync_parse_code(secret("TLX-ABCD-EFGH-JKMN-PQRS")).unwrap();
-    assert_eq!((short.kind.as_str(), short.server.as_str(), short.fingerprint), ("short", "", None));
+    let short = h
+        .state
+        .sync_parse_code(secret("TLX-ABCD-EFGH-JKMN-PQRS"))
+        .unwrap();
+    assert_eq!(
+        (
+            short.kind.as_str(),
+            short.server.as_str(),
+            short.fingerprint
+        ),
+        ("short", "", None)
+    );
 
     // A wrong password or recovery key is refused before anything is sent;
     // an add-device code is refused for a vault that already exists.
@@ -3318,7 +3386,12 @@ async fn sync_failures_use_the_codes_the_mock_documents() {
     let add_device = relink(&p.a.state.sync_link_code().await.unwrap().code, &p.srv.url);
     got.insert(
         "linkCodeBadAddress".into(),
-        code_of(p.a.state.sync_link_code_at(Some("a b".into())).await.unwrap_err()),
+        code_of(
+            p.a.state
+                .sync_link_code_at(Some("a b".into()))
+                .await
+                .unwrap_err(),
+        ),
     );
     got.insert(
         "enableWithAddDeviceCode".into(),

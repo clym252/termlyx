@@ -2082,3 +2082,20 @@ fn unreachable_keystore_never_falls_back_to_a_keychain_key() {
     assert!(!v.is_quick_unlock_enabled());
     assert!(keys.is_empty());
 }
+
+#[test]
+fn verify_password_checks_without_changing_the_session() {
+    let (_dir, _path, mut v, _) = created();
+    v.verify_password(&pw(PASSWORD)).unwrap();
+    assert!(matches!(
+        v.verify_password(&pw("wrong")),
+        Err(VaultError::WrongPassword)
+    ));
+    assert!(v.is_unlocked());
+    v.lock();
+    assert!(matches!(
+        v.verify_password(&pw(PASSWORD)),
+        Err(VaultError::Locked)
+    ));
+    assert!(!v.is_unlocked());
+}
