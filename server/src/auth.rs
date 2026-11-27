@@ -523,6 +523,15 @@ async fn check_credentials(
             return Err(ApiError::of(ErrorCode::RateLimited));
         }
         check_verifier(key.to_vec(), None).await?;
+        // A wrong key on a real account writes its failure count; write
+        // something too, so the answer takes about as long. (A value that
+        // changes: SQLite skips rewriting an identical row.)
+        sqlx::query(
+            "INSERT INTO meta (k, v) VALUES ('unknown_failure', randomblob(8)) \
+             ON CONFLICT (k) DO UPDATE SET v = excluded.v",
+        )
+        .execute(&st.db)
+        .await?;
         st.limiter.record_unknown_failure(username, now, &st.limits);
         tracing::warn!("sign-in failed: unknown username");
         return Err(wrong_credentials());

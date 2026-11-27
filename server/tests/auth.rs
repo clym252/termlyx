@@ -293,6 +293,40 @@ async fn prelogin_unknown_user_is_indistinguishable() {
 }
 
 #[tokio::test]
+async fn prelogin_fake_salt_rotates_like_a_real_one_might() {
+    let srv = spawn().await;
+    register(&srv, "known").await;
+    let t0 = now_ms();
+    srv.set_clock(t0);
+    let real = kdf_of(&prelogin(&srv, "known").await).salt;
+    let ghost = kdf_of(&prelogin(&srv, "ghost").await).salt;
+    // A period later the made-up name has a new salt; the account does not.
+    srv.set_clock(t0 + 90 * 24 * 60 * MIN);
+    assert_eq!(kdf_of(&prelogin(&srv, "known").await).salt, real);
+    assert_ne!(kdf_of(&prelogin(&srv, "ghost").await).salt, ghost);
+}
+
+#[tokio::test]
+async fn a_failed_sign_in_writes_for_unknown_names_too() {
+    async fn data_version(c: &mut sqlx::SqliteConnection) -> i64 {
+        sqlx::query_scalar("PRAGMA data_version")
+            .fetch_one(c)
+            .await
+            .unwrap()
+    }
+    let srv = spawn().await;
+    let acct = register(&srv, "real").await;
+    // `data_version` moves when another connection commits a write.
+    let mut conn = srv.state.db.acquire().await.unwrap();
+    for name in ["real", "ghost"] {
+        let before = data_version(&mut conn).await;
+        let res = login_device_with(&srv, name, &acct.tokens.device_id, None, &[9; 32]).await;
+        assert_err(&res, 401, ErrorCode::Unauthorized);
+        assert_ne!(data_version(&mut conn).await, before, "{name}");
+    }
+}
+
+#[tokio::test]
 async fn wrong_auth_key_is_unauthorized_and_counts_toward_lockout() {
     let srv = spawn().await;
     let acct = register(&srv, "carol").await;

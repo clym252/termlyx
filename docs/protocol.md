@@ -248,6 +248,12 @@ response bodies are the `core-proto` types named in the table below.
   `HMAC-SHA256(server_secret, "prelogin|" + username)[..16]`: same shape, same
   values every time, different per name. A wrong key and an unknown username
   both get `401 unauthorized` and cost the same Argon2 work.
+  *Addendum (server hardening, issue 34):* the HMAC input also carries a
+  90-day epoch, offset per name, so a made-up name's salt is stable for 90
+  days and then replaced, at a different moment for each name (a real
+  account's salt changes too, after a password change or recovery). A failed
+  sign-in for an unknown username also writes to the database, as a real
+  account's failure count does. Clients see no difference.
 * A disabled account (`tether-server users disable`) is refused with
   `403 forbidden` at login, refresh and on every authenticated call.
 
