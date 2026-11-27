@@ -1062,7 +1062,9 @@ mod tests {
     fn unpinned_proofs_must_be_bound_to_the_typed_host() {
         use super::{Pin, SyncError, check_server_proof};
         use core_proto::server_proof;
-        let (key, nonce, host) = ([1; 32], [2; 32], "sync.example.com:443");
+        use secrecy::ExposeSecret;
+        let random = || *core_crypto::keys::random_key().expose_secret();
+        let (key, nonce, host) = (random(), random(), "sync.example.com:443");
         let check = |pin: &Option<Pin>, proof: [u8; 32]| {
             check_server_proof(&key, pin, host, &nonce, &proof)
         };
