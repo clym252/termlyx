@@ -322,6 +322,16 @@ jobs:
             --dir dist --base-url "https://github.com/${OWNER}/termlyx/releases/download/${GITHUB_REF_NAME}" \
             > "$RUNNER_TEMP/latest.json"
           mv "$RUNNER_TEMP/latest.json" dist/latest.json
+      # Versionless copies so releases/latest/download/<name> (the website's
+      # download buttons) always works. After latest.json, so the updater only
+      # sees versioned names; before SHA256SUMS, so the copies are listed and attested.
+      - name: Fixed-name installer copies
+        working-directory: dist
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          cp -- "Termlyx_${VERSION}_universal.dmg" Termlyx_universal.dmg
+          cp -- "Termlyx_${VERSION}_x64-setup.exe" Termlyx_x64-setup.exe
       - name: SHA256SUMS
         working-directory: dist
         run: |

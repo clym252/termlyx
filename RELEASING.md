@@ -19,7 +19,9 @@ version and the notes banner say "beta".
    approval of the `release` environment: review the run, then approve.
 5. A **draft** release appears with the assets below. Check it:
    - assets: `Termlyx_X.Y.Z_universal.dmg` (notarized and stapled), `Termlyx.app.tar.gz` and `.sig`,
-     `Termlyx_X.Y.Z_x64-setup.exe` and `.sig`, `termlyx-server-<target>`,
+     `Termlyx_X.Y.Z_x64-setup.exe` and `.sig`, the versionless copies
+     `Termlyx_universal.dmg` and `Termlyx_x64-setup.exe` (the website links to
+     them via `releases/latest/download/`), `termlyx-server-<target>`,
      `latest.json`, `SHA256SUMS`, `termlyx-X.Y.Z-sbom.cdx.json`, and the
      server deploy files;
    - `latest.json` lists both Mac and Windows with signatures;
