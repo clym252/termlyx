@@ -929,16 +929,22 @@ async fn refresh(
         // The grace: nobody has used what the last exchange issued, so its
         // answer was most likely lost. Invalidate that session and answer
         // again — once (the old token keeps no successor, so a third
-        // presentation revokes).
+        // presentation revokes). The replaced refresh token stays as rotated
+        // with no successor: if its answer was not lost after all, whoever
+        // holds it presents it next and the device is revoked, so a thief
+        // replaying the old token cannot quietly take the session over.
         sqlx::query("DELETE FROM access_tokens WHERE device_id = ? AND refresh_hash = ?")
             .bind(&device_id)
             .bind(&succ)
             .execute(&mut *tx)
             .await?;
-        sqlx::query("DELETE FROM refresh_tokens WHERE hash = ?")
-            .bind(&succ)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "UPDATE refresh_tokens SET rotated_at = ?, successor_hash = NULL WHERE hash = ?",
+        )
+        .bind(now)
+        .bind(&succ)
+        .execute(&mut *tx)
+        .await?;
         let session = start_session(&mut tx, &account_id, &device_id, now).await?;
         sqlx::query("UPDATE refresh_tokens SET successor_hash = NULL WHERE hash = ?")
             .bind(&hash)

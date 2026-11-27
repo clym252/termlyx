@@ -192,6 +192,10 @@ response bodies are the `core-proto` types named in the table below.
   sleep, a timeout); two concurrent refreshes with one token end with exactly
   one live session (the later answer's). Server migration `0004` adds the
   columns this needs; tokens rotated before it get no grace.
+  *Addendum (server hardening, issue 35):* the invalidated pair's refresh
+  token is kept as rotated-out, so presenting it later is reuse and revokes
+  the device. A device whose answer really was lost never holds it; one that
+  did get it learns that someone else used its previous token.
 * **Revocation.** A revoked device keeps its (now useless) token rows, so its
   next request of any kind, including `refresh` and `login`, is answered
   `401 revoked` ("device revoked") rather than a generic "sign in again". It

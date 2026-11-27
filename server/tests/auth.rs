@@ -1416,8 +1416,8 @@ async fn a_lost_refresh_answer_is_retried_within_the_grace() {
     let again: TokenResp = res.json();
     assert_ne!(again.refresh_token, lost.refresh_token);
     assert_eq!(again.device_id, acct.tokens.device_id);
-    // The new session works; the unused successor was invalidated (not a
-    // revocation: it is simply unknown now).
+    // The new session works; the unused successor's access token was
+    // invalidated (its refresh token now revokes, see below).
     assert_eq!(
         get_auth(&srv, "/v1/devices", &again.access_token)
             .await
@@ -1429,11 +1429,6 @@ async fn a_lost_refresh_answer_is_retried_within_the_grace() {
         401,
         ErrorCode::Unauthorized,
     );
-    assert_err(
-        &refresh_with(&srv, &lost.refresh_token).await,
-        401,
-        ErrorCode::Unauthorized,
-    );
     // The newest token keeps rotating normally.
     let next = refresh_with(&srv, &again.refresh_token).await;
     assert_eq!(next.status, 200);
@@ -1441,6 +1436,36 @@ async fn a_lost_refresh_answer_is_retried_within_the_grace() {
     assert_err(&refresh_with(&srv, &r1).await, 401, ErrorCode::Revoked);
     assert_err(
         &get_auth(&srv, "/v1/devices", &next.json::<TokenResp>().access_token).await,
+        401,
+        ErrorCode::Revoked,
+    );
+}
+
+#[tokio::test]
+async fn replaying_the_old_token_in_the_grace_cannot_take_over_quietly() {
+    let srv = spawn().await;
+    let acct = register(&srv, "takeover").await;
+    let r1 = acct.tokens.refresh_token.clone();
+    // The device refreshes and gets its answer...
+    let mine: TokenResp = refresh_with(&srv, &r1).await.json();
+    // ...but a thief with the old token beats it to the first call.
+    let stolen = refresh_with(&srv, &r1).await;
+    assert_eq!(stolen.status, 200);
+    let stolen: TokenResp = stolen.json();
+    // The device's access token is gone, so it refreshes: reuse, revoked.
+    assert_err(
+        &get_auth(&srv, "/v1/devices", &mine.access_token).await,
+        401,
+        ErrorCode::Unauthorized,
+    );
+    assert_err(
+        &refresh_with(&srv, &mine.refresh_token).await,
+        401,
+        ErrorCode::Revoked,
+    );
+    // And the thief's session dies with the device.
+    assert_err(
+        &get_auth(&srv, "/v1/devices", &stolen.access_token).await,
         401,
         ErrorCode::Revoked,
     );
@@ -1516,13 +1541,17 @@ async fn concurrent_refreshes_leave_one_live_session() {
         let live_b = get_auth(&srv, "/v1/devices", &b.access_token).await.status == 200;
         assert!(live_a ^ live_b, "{name}: {live_a} {live_b}");
         let (live, dead) = if live_a { (&a, &b) } else { (&b, &a) };
-        assert_err(
-            &refresh_with(&srv, &dead.refresh_token).await,
-            401,
-            ErrorCode::Unauthorized,
-        );
         assert_eq!(refresh_with(&srv, &live.refresh_token).await.status, 200);
-        // A third presentation of the shared token is theft.
-        assert_err(&refresh_with(&srv, &r1).await, 401, ErrorCode::Revoked);
+        if i % 2 == 0 {
+            // A third presentation of the shared token is theft.
+            assert_err(&refresh_with(&srv, &r1).await, 401, ErrorCode::Revoked);
+        } else {
+            // So is presenting the replaced answer's token.
+            assert_err(
+                &refresh_with(&srv, &dead.refresh_token).await,
+                401,
+                ErrorCode::Revoked,
+            );
+        }
     }
 }
