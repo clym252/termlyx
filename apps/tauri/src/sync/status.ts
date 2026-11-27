@@ -60,8 +60,10 @@ export interface Problem {
  * on `certificateChanged` and `revoked` and differ on "update Termlyx" (`updateRequired` /
  * `updateClient`).
  */
-export function problemFor(code: string, message: string): Problem {
+export function problemFor(code: string, message: string, server?: string): Problem {
   switch (code) {
+    case "unreachable":
+      return { message: server ? cantReach(urlHost(server), message) : message, hint: null, severe: false };
     case "certificateChanged":
       return {
         message,
@@ -98,6 +100,26 @@ export function problemFor(code: string, message: string): Problem {
   }
 }
 
+/** The short reason in the backend's "server unreachable (reason)", or null. */
+export function unreachableReason(message: string): string | null {
+  return /^server unreachable \((.+)\)$/.exec(message)?.[1] ?? null;
+}
+
+/** "Can't reach <where> (<reason>)." with the address shown as the user knows it. */
+function cantReach(where: string, message: string): string {
+  const reason = unreachableReason(message);
+  return `Can't reach ${where}${reason ? ` (${reason})` : ""}. Is the server running, and is this device on the same network?`;
+}
+
+/** A code's server URL as `host[:port]` (the scheme's port left out). */
+function urlHost(url: string): string {
+  try {
+    return new URL(url).host || url;
+  } catch {
+    return url;
+  }
+}
+
 /** A typed address as `host:port` (8443 unless typed; IPv6 keeps its brackets). */
 export function hostPort(typed: string): string {
   const t = typed.trim().replace(/^https:\/\//i, "").replace(/\/$/, "");
@@ -117,7 +139,7 @@ export function problemFromCheckError(e: unknown, address: string): Problem {
     case "invalidAddress":
       return plain("That server address isn't valid. Use an address like 192.168.1.20, nas.local or nas.local:8443.");
     case "unreachable":
-      return plain(`Can't reach ${hostPort(address)}. Is the server running, and is this device on the same network?`);
+      return plain(cantReach(hostPort(address), isApiError(e) ? e.message : ""));
     case "protocol":
       return plain("That address answers, but it is not a Termlyx server. Check the address and port.");
     case "invalidCode":
@@ -139,9 +161,9 @@ export function needsSignIn(state: SyncState): boolean {
   return state.state === "error" && state.kind === "signInAgain";
 }
 
-/** The problem a rejected command stands for. */
-export function problemFromError(e: unknown): Problem {
-  return problemFor(isApiError(e) ? e.code : "", describeError(e));
+/** The problem a rejected command stands for; `server` (a code's URL) names where it could not connect. */
+export function problemFromError(e: unknown, server?: string): Problem {
+  return problemFor(isApiError(e) ? e.code : "", describeError(e), server);
 }
 
 /** The problem an `error` state stands for (null for the other states). */

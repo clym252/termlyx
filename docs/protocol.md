@@ -113,15 +113,30 @@ key          = SHA256(token)                 // equals invites.token_hash
 id           = SHA256("termlyx-code-id-v1" || key)[..16]
 server_proof = HMAC-SHA256(key, "termlyx-code-server-v1" || binding || client_nonce)
 client_proof = HMAC-SHA256(key, "termlyx-code-client-v1" || binding || client_nonce)
-binding      = 32-byte SPKI pin when pinned, else empty
+binding      = 32-byte SPKI pin when pinned, else the `host` field's bytes,
+               else empty (clients that send no `host`)
 ```
 
-`POST /v1/code/verify` (no auth): `CodeVerifyReq {codeId, clientNonce, pinned}`
+`host` (optional, sent only when unpinned) is the address the user typed as
+`host:port`, lowercased, IPv6 in brackets, port always present
+(`nas.local:8443`, `[fd00::5]:8443`). It ties the proof to that address, so a
+relay at a look-alike address with its own publicly trusted certificate cannot
+pass the real server's proof on. The server refuses (`invite_invalid`) a `host`
+that is not one of its own names: its certificate's SANs (wildcards match one
+label), `TERMLYX_NAMES`, `TERMLYX_IPS`, the host of `TERMLYX_URL`, or loopback.
+A client that sent `host` refuses a proof over the empty binding as "update the
+server": an older server ignores `host`, and so must not be trusted unpinned.
+
+A self-signed server refuses (`invite_invalid`) every unpinned proof, `host` or
+not, unless `TERMLYX_BEHIND_PROXY` is set: clients reaching it directly always
+pin, so an unpinned client was shown some other certificate.
+
+`POST /v1/code/verify` (no auth): `CodeVerifyReq {codeId, clientNonce, pinned, host?}`
 (16 and 32 bytes, base64) returns `CodeVerifyResp {serverProof}`. The client
 checks `server_proof` before trusting the server. An unknown, used or expired
 code answers `invite_invalid` (403).
 
-`RegisterReq.codeProof` (`{codeId, clientNonce, pinned, proof}`, omitted when
+`RegisterReq.codeProof` (`{codeId, clientNonce, pinned, host?, proof}`, omitted when
 absent) redeems a short code instead of `inviteToken`, which is then empty;
 `proof` is `client_proof`. A bad or missing proof is `invite_invalid`.
 
@@ -267,7 +282,7 @@ response bodies are the `core-proto` types named in the table below.
 | --- | --- | --- | --- | --- |
 | `POST /v1/prelogin` | none | `PreloginReq {username}` | `PreloginResp {kdf}` | `bad_request`, `rate_limited` |
 | `POST /v1/register` | none (invite token in body) | `RegisterReq` | `TokenResp` (with `deviceSecret`) | `bad_request`, `invite_invalid` (unknown, used, expired or malformed token; bad or malformed `codeProof`), `username_taken`, `conflict` (vault id already exists), `rate_limited` |
-| `POST /v1/code/verify` | none | `CodeVerifyReq` | `CodeVerifyResp` | `invite_invalid` (unknown, used or expired code, malformed fields, or `pinned` with TLS off), `rate_limited` |
+| `POST /v1/code/verify` | none | `CodeVerifyReq` | `CodeVerifyResp` | `invite_invalid` (unknown, used or expired code, malformed fields, `pinned` with TLS off, unpinned on a self-signed server without `TERMLYX_BEHIND_PROXY`, or a `host` that is not the server's), `rate_limited` |
 | `POST /v1/login` | none | `LoginReq` (`linkToken` to add a device; otherwise `X-Tether-Device` + `X-Tether-Device-Secret`) | `TokenResp` (`deviceSecret` set when a device was created) | `bad_request`, `unauthorized` (wrong key, unknown user, or wrong/missing device secret), `rate_limited`, `forbidden` (no link token and not an existing device; disabled account), `invite_invalid` (link token unknown, spent, expired or another account's), `revoked` |
 | `POST /v1/recover-login` | none | `RecoverReq` | `TokenResp` (limited) | `bad_request`, `unauthorized`, `rate_limited`, `forbidden` |
 | `POST /v1/refresh` | none (refresh token in body) | `RefreshReq` | `TokenResp` | `unauthorized`, `revoked` (also on reuse of a rotated token outside the grace), `forbidden` |

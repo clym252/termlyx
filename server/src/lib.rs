@@ -148,6 +148,10 @@ async fn start_inner(
         _ => None,
     };
     state.own_spki = pin;
+    state.code_hosts = std::sync::Arc::new(accounts::code_hosts(
+        &state.cfg,
+        tls.as_ref().map_or(&[][..], tls::TlsMaterial::names),
+    ));
     tweak(&mut state);
     let compactor = compact::spawn(state.db.clone(), state.clock.clone()).await;
     // Connect info gives the handlers the peer address for per-IP limits.

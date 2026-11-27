@@ -3164,7 +3164,7 @@ fn sync_error_codes_are_distinct_and_plain() {
         (
             SyncError::Unreachable("connection refused (os error 61)".into()),
             "unreachable",
-            "server unreachable",
+            "server unreachable (connection refused (os error 61))",
         ),
         (SyncError::WrongPassword, "wrongPassword", "wrong password"),
         (

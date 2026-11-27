@@ -184,6 +184,10 @@ pub struct CodeVerifyReq {
     pub client_nonce: Vec<u8>,
     /// Whether the client bound the proof to the server's SPKI pin.
     pub pinned: bool,
+    /// Unpinned only: the typed address's `host:port` the proof is bound to
+    /// (`short_code::host_binding`). Absent from older clients.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host: Option<String>,
 }
 
 /// The server's proof that it knows the code's key.
@@ -203,6 +207,9 @@ pub struct CodeProof {
     #[serde(with = "b64")]
     pub client_nonce: Vec<u8>,
     pub pinned: bool,
+    /// As `CodeVerifyReq::host`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host: Option<String>,
     #[serde(with = "b64")]
     pub proof: Vec<u8>,
 }
@@ -618,6 +625,7 @@ mod tests {
             code_id: vec![1; 16],
             client_nonce: vec![2; 32],
             pinned: true,
+            host: None,
             proof: vec![3; 32],
         };
         v["codeProof"] = serde_json::to_value(&proof).unwrap();
@@ -626,6 +634,7 @@ mod tests {
             data_encoding::BASE64.encode(&[1; 16])
         );
         assert_eq!(v["codeProof"]["pinned"], true);
+        assert!(v["codeProof"].get("host").is_none(), "absent, as older clients send it");
         let back: RegisterReq = serde_json::from_value(v).unwrap();
         assert_eq!(back.code_proof, Some(proof));
     }

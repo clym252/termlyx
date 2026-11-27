@@ -383,7 +383,7 @@ async fn unreachable_is_distinct_error() {
         let SyncError::Unreachable(reason) = &err else {
             panic!("expected Unreachable, got {err:?}");
         };
-        assert_eq!(err.to_string(), "server unreachable");
+        assert_eq!(err.to_string(), format!("server unreachable ({reason})"));
         // A short reason; no address, URL or port leaks into it.
         assert!(!reason.is_empty() && reason.len() < 80, "{reason}");
         assert!(!reason.contains("127.0.0.1") && !reason.contains(&port.to_string()));

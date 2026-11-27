@@ -11,12 +11,14 @@
 //! | `TERMLYX_IPS` | comma list of IPs for the certificate | none |
 //! | `TERMLYX_URL` | public URL put into full codes | `https://{first name}` if names are set, else none |
 //! | `TERMLYX_ALLOW_PLAIN` | allow `off` on a non-loopback address | `false` |
+//! | `TERMLYX_BEHIND_PROXY` | `self-signed` behind a TLS proxy: accept short codes redeemed without the pin | `false` |
 //! | `TERMLYX_VAULT_QUOTA_MB` | most sealed-record bytes one vault may store, MiB; `0` for no limit | `256` |
 //!
 //! Every variable is also read as `TETHER_X` when `TERMLYX_X` is unset.
 //!
 //! `server.toml` uses the lowercase keys `bind`, `tls`, `tls_cert`, `tls_key`,
-//! `names`, `ips`, `url`, `allow_plain_remote`, `vault_quota_mb`. The data directory itself can
+//! `names`, `ips`, `url`, `allow_plain_remote`, `behind_proxy`,
+//! `vault_quota_mb`. The data directory itself can
 //! only come from the environment.
 
 use std::net::{IpAddr, SocketAddr};
@@ -86,6 +88,10 @@ pub struct Config {
     pub public_url: Option<String>,
     /// Allow `TlsMode::Off` on a non-loopback address.
     pub allow_plain_remote: bool,
+    /// A TLS proxy fronts a `SelfSigned` server, so clients see the proxy's
+    /// certificate and redeem short codes unpinned. Without it such proofs
+    /// are refused: clients reaching this server directly always pin.
+    pub behind_proxy: bool,
     /// Most bytes of sealed records one vault may hold; `0` for no limit.
     pub vault_quota_bytes: u64,
 }
@@ -104,6 +110,7 @@ struct FileConfig {
     ips: Option<Vec<String>>,
     url: Option<String>,
     allow_plain_remote: Option<bool>,
+    behind_proxy: Option<bool>,
     vault_quota_mb: Option<u64>,
 }
 
@@ -142,6 +149,7 @@ impl Config {
             ips: vec![],
             public_url: None,
             allow_plain_remote: false,
+            behind_proxy: false,
             vault_quota_bytes: DEFAULT_VAULT_QUOTA_MB << 20,
         }
     }
@@ -234,6 +242,11 @@ impl Config {
             None => file.allow_plain_remote.unwrap_or(false),
         };
 
+        let behind_proxy = match get("TERMLYX_BEHIND_PROXY") {
+            Some(v) => parse_bool("TERMLYX_BEHIND_PROXY", &v)?,
+            None => file.behind_proxy.unwrap_or(false),
+        };
+
         // Explicit names keep the legacy `https://{first name}` default so
         // existing deployments keep making the same codes.
         let public_url = get("TERMLYX_URL")
@@ -259,6 +272,7 @@ impl Config {
             ips,
             public_url,
             allow_plain_remote,
+            behind_proxy,
             vault_quota_bytes,
         };
         cfg.check()?;
@@ -314,6 +328,13 @@ mod tests {
         assert_eq!(c.public_url, None);
         assert!(!c.allow_plain_remote);
         assert_eq!(c.vault_quota_bytes, 256 << 20);
+        assert!(!c.behind_proxy);
+        let c = Config::from_lookup(lookup(&[
+            ("TERMLYX_DATA", dir.path().to_str().unwrap()),
+            ("TERMLYX_BEHIND_PROXY", "1"),
+        ]))
+        .unwrap();
+        assert!(c.behind_proxy);
         assert_eq!(
             Config::from_lookup(lookup(&[("HOME", "/h")]))
                 .unwrap()

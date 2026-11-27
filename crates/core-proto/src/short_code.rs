@@ -127,8 +127,16 @@ fn proof(label: &[u8], key: &[u8; 32], binding: &[u8], nonce: &[u8; 32]) -> [u8;
 const SERVER_LABEL: &[u8] = b"termlyx-code-server-v1";
 const CLIENT_LABEL: &[u8] = b"termlyx-code-client-v1";
 
+/// The binding of an unpinned proof: `host:port` of `url` (a
+/// [`parse_address`] result), lowercased, so a relay at another address
+/// cannot pass the real server's proof on.
+pub fn host_binding(url: &str) -> String {
+    url.strip_prefix("https://").unwrap_or(url).to_ascii_lowercase()
+}
+
 /// What the server returns to show it knows the code. `binding` is the 32-byte
-/// SPKI pin when the client pinned, else empty.
+/// SPKI pin when the client pinned, else the [`host_binding`] the client sent
+/// (empty from older clients).
 pub fn server_proof(key: &[u8; 32], binding: &[u8], client_nonce: &[u8; 32]) -> [u8; 32] {
     proof(SERVER_LABEL, key, binding, client_nonce)
 }
@@ -337,6 +345,14 @@ mod tests {
         ] {
             assert_eq!(parse_address(i).unwrap(), o);
         }
+        assert_eq!(
+            host_binding(&parse_address("NAS.Local").unwrap()),
+            "nas.local:8443"
+        );
+        assert_eq!(
+            host_binding(&parse_address("[FD00::5]:9000").unwrap()),
+            "[fd00::5]:9000"
+        );
         for bad in [
             "",
             "http://nas.local",

@@ -20,7 +20,7 @@ pub mod short_code;
 pub use api::*;
 pub use code::{CodeError, CodeKind, JoinCode, fingerprint_text};
 pub use short_code::{
-    DEFAULT_PORT, ShortCode, client_proof, parse_address, server_proof, verify_client_proof,
+    DEFAULT_PORT, ShortCode, client_proof, host_binding, parse_address, server_proof, verify_client_proof,
     verify_server_proof,
 };
 

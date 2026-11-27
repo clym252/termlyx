@@ -210,16 +210,21 @@ test("sync_errors_are_shown_in_their_step", async ({ page }) => {
   await expect(d.getByRole("alert")).toContainText("this code needs a newer Termlyx");
   await expect(d.getByRole("alert")).toContainText("update Termlyx");
 
-  // An unreachable server in the last step stays in that step; the form keeps what was typed.
+  // An unreachable server in the last step stays in that step, named with the reason; the form
+  // keeps what was typed.
   await d.getByRole("button", { name: "Continue" }).click();
   await d.getByRole("button", { name: "Continue" }).click();
   await d.getByLabel("Username").fill("alice");
   await d.getByRole("button", { name: "Continue" }).click();
   await d.getByLabel("Master password", { exact: true }).fill(PASSWORD);
   await d.getByRole("button", { name: "Continue" }).click();
-  await page.evaluate(() => window.__tetherMock.control.failNextSync("enable", "unreachable", "server unreachable"));
+  await page.evaluate(() =>
+    window.__tetherMock.control.failNextSync("enable", "unreachable", "server unreachable (timed out)"),
+  );
   await d.getByRole("button", { name: "I lost it — create a new one" }).click();
-  await expect(d.getByRole("alert")).toHaveText("server unreachable");
+  await expect(d.getByRole("alert")).toHaveText(
+    "Can't reach sync.mock.test (timed out). Is the server running, and is this device on the same network?",
+  );
   await expect(d.getByRole("heading", { name: "Recovery key" })).toBeVisible();
 
   // Escape closes the dialog.
