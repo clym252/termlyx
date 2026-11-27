@@ -21,6 +21,7 @@ use std::sync::{Arc, Mutex};
 use core_crypto::{CryptoError, random_key, unwrap_secret, wrap_secret};
 use core_model::Id;
 use secrecy::{ExposeSecret, SecretBox};
+use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
 use super::VaultError;
@@ -31,6 +32,23 @@ use super::service::{VaultService, keys, open_account, wrap_label};
 const ENABLE_REASON: &str = "turn on quick unlock for your Termlyx vault";
 /// What the system prompt says on a quick unlock.
 const UNLOCK_REASON: &str = "unlock your Termlyx vault";
+
+/// The device wrap's label. Behind a presence gate the enrollment state is
+/// bound in (`…/{hex(sha256(state))}`), so deleting `quick_unlock.biometry`
+/// cannot carry the wrap over to changed fingers or faces.
+fn device_label(vault_id: Id, state: Option<&[u8]>) -> String {
+    let plain = wrap_label("device", vault_id);
+    match state {
+        Some(state) => {
+            let hex: String = Sha256::digest(state)
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect();
+            format!("{plain}/{hex}")
+        }
+        None => plain,
+    }
+}
 
 /// Per-vault storage for the 32-byte device key. Errors are human-readable
 /// descriptions without key material.
@@ -172,7 +190,7 @@ impl VaultService {
         let wrapped = wrap_secret(
             device_key.expose_secret(),
             unlocked.account.secret.expose_secret(),
-            &wrap_label("device", vault_id),
+            &device_label(vault_id, state.as_deref()),
         );
         self.keystore
             .set(vault_id, device_key.expose_secret())
@@ -261,9 +279,11 @@ impl VaultService {
     /// confirms ([`VaultError::PresenceDenied`] otherwise, or
     /// [`VaultError::BiometryUnavailable`] when the check cannot run). If the
     /// enrolled fingers changed since quick unlock was enabled, it is turned
-    /// off and [`VaultError::BiometryChanged`] returned without asking. A
-    /// vault enabled without a gate records the state on its first gated
-    /// unlock.
+    /// off and [`VaultError::BiometryChanged`] returned without asking. The
+    /// wrap is bound to the enrollment state ([`device_label`]), so a missing
+    /// state row on changed fingers fails the unwrap instead of being
+    /// recorded afresh. A vault enabled without a gate (or by a build before
+    /// the binding) records the state and rewraps on its first gated unlock.
     ///
     /// Behind a key-binding gate the prompt derives the wrapping key. A key
     /// that no longer opens the wrap (Windows Hello reset), a platform
@@ -307,38 +327,57 @@ impl VaultService {
         if challenge.is_some() {
             return Err(self.turn_off_quick_unlock_changed());
         }
-        let mut record_state = None;
+        let mut state = None;
+        let mut record_state = false;
         if self.gate.checks_presence() {
-            let state = self.gate.state()?;
+            let current = self.gate.state()?;
             match self.store.account_get(keys::BIOMETRY_STATE)? {
-                Some(stored) if stored != state => {
+                Some(stored) if stored != current => {
                     self.disable_quick_unlock()?;
                     return Err(VaultError::BiometryChanged);
                 }
                 Some(_) => {}
-                None => record_state = Some(state),
+                None => record_state = true,
             }
             self.gate.confirm(UNLOCK_REASON)?;
+            state = Some(current);
         }
         let device_key = self
             .keystore
             .get(acct.vault_id)
             .map_err(VaultError::Keychain)?
             .ok_or_else(|| VaultError::Keychain("device key missing from keychain".into()))?;
-        let secret = unwrap_secret(
-            device_key.expose_secret(),
-            wrapped,
-            &wrap_label("device", acct.vault_id),
-        )
-        .map_err(|e| match e {
-            CryptoError::Decrypt => {
-                VaultError::Keychain("keychain device key does not match this vault".into())
+        let open = |label: &str| {
+            unwrap_secret(device_key.expose_secret(), wrapped, label).map_err(|e| match e {
+                CryptoError::Decrypt => {
+                    VaultError::Keychain("keychain device key does not match this vault".into())
+                }
+                e => VaultError::Crypto(e),
+            })
+        };
+        let (secret, rewrap) = match open(&device_label(acct.vault_id, state.as_deref())) {
+            Ok(secret) => (secret, false),
+            // Enabled without a gate or before the binding: the plain label.
+            Err(VaultError::Keychain(_)) if state.is_some() => {
+                (open(&wrap_label("device", acct.vault_id))?, true)
             }
-            e => VaultError::Crypto(e),
-        })?;
+            Err(e) => return Err(e),
+        };
         self.set_unlocked(open_account(&acct, &secret)?)?;
-        if let Some(state) = record_state {
-            self.store.account_put(keys::BIOMETRY_STATE, &state)?;
+        if let Some(state) = state.filter(|_| record_state || rewrap) {
+            let store = &self.store;
+            store.atomically(|| -> Result<(), VaultError> {
+                if rewrap {
+                    let bound = wrap_secret(
+                        device_key.expose_secret(),
+                        secret.expose_secret(),
+                        &device_label(acct.vault_id, Some(&state)),
+                    );
+                    store.account_put(keys::SECRET_BY_DEVICE, &bound)?;
+                }
+                store.account_put(keys::BIOMETRY_STATE, &state)?;
+                Ok(())
+            })?;
         }
         Ok(())
     }

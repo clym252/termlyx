@@ -1069,6 +1069,45 @@ fn legacy_enable_records_state_on_first_unlock() {
     assert_eq!(gate.confirms(), 1);
     v.lock();
 
+    // The first gated unlock bound the wrap to the state: deleting the row
+    // no longer lets changed fingers through.
+    delete_biometry_row(&v);
+    gate.set_state(Ok(b"fingers-2".to_vec()));
+    assert!(v.quick_unlock().is_err());
+    assert!(!v.is_unlocked());
+
+    gate.set_state(Ok(b"fingers-1".to_vec()));
+    v.quick_unlock().unwrap();
+    v.lock();
+    gate.set_state(Ok(b"fingers-2".to_vec()));
+    assert!(matches!(v.quick_unlock(), Err(VaultError::BiometryChanged)));
+}
+
+fn delete_biometry_row(v: &VaultService) {
+    v.store
+        .account_delete(super::service::keys::BIOMETRY_STATE)
+        .unwrap();
+}
+
+#[test]
+fn deleted_biometry_row_does_not_skip_the_changed_check() {
+    let (_dir, path) = temp_path();
+    let keys = MemoryKeyStore::default();
+    let gate = FakeGate::new(b"fingers-1");
+    let mut v = gated(&path, &keys, &gate);
+    v.create(pw(PASSWORD)).unwrap();
+    v.enable_quick_unlock().unwrap();
+    v.lock();
+
+    delete_biometry_row(&v);
+    gate.set_state(Ok(b"fingers-2".to_vec()));
+    assert!(matches!(v.quick_unlock(), Err(VaultError::Keychain(_))));
+    assert!(!v.is_unlocked());
+
+    // The enrolled fingers still open it, and the row comes back.
+    gate.set_state(Ok(b"fingers-1".to_vec()));
+    v.quick_unlock().unwrap();
+    v.lock();
     gate.set_state(Ok(b"fingers-2".to_vec()));
     assert!(matches!(v.quick_unlock(), Err(VaultError::BiometryChanged)));
 }
