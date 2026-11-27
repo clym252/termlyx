@@ -23,7 +23,7 @@ pub enum SyncError {
     WeakKdf,
     /// The server could not be reached (connect, DNS, TLS or timeout). Carries
     /// a short reason that never contains a URL or a token.
-    #[error("server unreachable")]
+    #[error("server unreachable ({0})")]
     Unreachable(String),
     /// The server revoked this device.
     #[error("device revoked")]
@@ -150,7 +150,7 @@ mod tests {
         assert_eq!(SyncError::UpdateClient.to_string(), "update Termlyx");
         assert_eq!(
             SyncError::Unreachable("connection refused".into()).to_string(),
-            "server unreachable"
+            "server unreachable (connection refused)"
         );
     }
 

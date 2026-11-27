@@ -345,6 +345,15 @@ pub(crate) fn classify(err: &(dyn Error + 'static), timed_out: bool) -> SyncErro
     }) {
         return SyncError::Unreachable(format!("TLS: {tls}"));
     }
+    // A name that does not resolve: hyper's "dns error", or std's lookup
+    // failure (WebSocket). Their causes can name the host, so not shown.
+    let dns = find_in_chain(err, &mut |e| {
+        let m = e.to_string();
+        (m == "dns error" || m.starts_with("failed to lookup address")).then_some(())
+    });
+    if dns.is_some() {
+        return SyncError::Unreachable("DNS lookup failed".into());
+    }
     match io_kind {
         Some(kind) if kind != io::ErrorKind::Other => SyncError::Unreachable(kind.to_string()),
         _ => SyncError::Unreachable("could not connect".into()),
@@ -507,6 +516,35 @@ mod tests {
             );
             assert_eq!(got.unwrap(), expect);
         }
+    }
+
+    #[test]
+    fn reasons_name_the_failure_without_the_host() {
+        /// hyper-util's connect error: "dns error" over the resolver's cause.
+        #[derive(Debug)]
+        struct Dns(io::Error);
+        impl std::fmt::Display for Dns {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("dns error")
+            }
+        }
+        impl Error for Dns {
+            fn source(&self) -> Option<&(dyn Error + 'static)> {
+                Some(&self.0)
+            }
+        }
+        let unreachable = |r: &str| SyncError::Unreachable(r.into());
+        let dns = Dns(io::Error::other("nodename nor servname provided: nas.lan"));
+        assert_eq!(classify(&dns, false), unreachable("DNS lookup failed"));
+        let lookup = io::Error::other("failed to lookup address information: nas.lan");
+        assert_eq!(classify(&lookup, false), unreachable("DNS lookup failed"));
+        let refused = io::Error::from(io::ErrorKind::ConnectionRefused);
+        assert_eq!(classify(&refused, false), unreachable("connection refused"));
+        assert_eq!(
+            classify(&refused, false).to_string(),
+            "server unreachable (connection refused)"
+        );
+        assert_eq!(classify(&refused, true), unreachable("timed out"));
     }
 
     #[test]

@@ -1989,7 +1989,7 @@ export function createMockApi(seed: MockSeed = {}): MockTetherApi {
         if (oldPassword !== password) throw apiError("wrongPassword", "wrong password");
         if (syncAccount) {
           // With sync on the server hears of it first.
-          if (syncState.state === "offline") throw apiError("unreachable", "server unreachable");
+          if (syncState.state === "offline") throw apiError("unreachable", "server unreachable (connection refused)");
           if (serverAccount) serverAccount.password = newPassword;
         }
         password = newPassword;

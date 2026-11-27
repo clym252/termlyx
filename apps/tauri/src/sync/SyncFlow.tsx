@@ -213,7 +213,7 @@ export function SyncFlow({ context, onClose, onDone, onBusy }: SyncFlowProps) {
     } else if (code === "invalidCode" && fallback !== "deviceCode") {
       target = "code";
     }
-    setProblem(problemFromError(e));
+    setProblem(problemFromError(e, info?.server));
     setStep(target);
   }
 

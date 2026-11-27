@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { isApiError } from "../api/types";
-import { hostPort, describeSync, needsSignIn, problemFor, problemFromError, problemFromState } from "./status";
+import {
+  describeSync,
+  hostPort,
+  needsSignIn,
+  problemFor,
+  problemFromCheckError,
+  problemFromError,
+  problemFromState,
+  unreachableReason,
+} from "./status";
 
 const at = (ms: number) => `T${ms}`;
 
@@ -74,11 +83,27 @@ describe("problems", () => {
   });
 
   it("adds nothing to plain failures", () => {
-    expect(problemFor("unreachable", "server unreachable")).toEqual({
-      message: "server unreachable",
+    expect(problemFor("unreachable", "server unreachable (timed out)")).toEqual({
+      message: "server unreachable (timed out)",
       hint: null,
       severe: false,
     });
+  });
+
+  it("names the code's server and the reason when it cannot be reached", () => {
+    const e = { code: "unreachable", message: "server unreachable (DNS lookup failed)", refs: [] };
+    expect(problemFromError(e, "https://nas.local:8443").message).toBe(
+      "Can't reach nas.local:8443 (DNS lookup failed). Is the server running, and is this device on the same network?",
+    );
+    // The scheme's own port is left out; a reason-less message adds none.
+    expect(problemFor("unreachable", "server unreachable", "https://sync.example.com").message).toMatch(
+      /^Can't reach sync\.example\.com\. /,
+    );
+    expect(problemFromCheckError({ ...e, message: "server unreachable (TLS: bad cert)" }, "[fd00::5]").message).toMatch(
+      /^Can't reach \[fd00::5\]:8443 \(TLS: bad cert\)\. /,
+    );
+    expect(unreachableReason("server unreachable (timed out)")).toBe("timed out");
+    expect(unreachableReason("raw backend text")).toBeNull();
   });
 
   it("reads a rejected command through its code", () => {
