@@ -804,8 +804,16 @@ async fn refresh(
 ) -> ApiResult<Json<TokenResp>> {
     let hash = token_hash(&req.refresh_token).ok_or_else(unauthorized)?;
     let now = st.now_ms();
+    // A plain read first, so unknown tokens never queue for the write lock.
+    let known: Option<i64> = sqlx::query_scalar("SELECT 1 FROM refresh_tokens WHERE hash = ?")
+        .bind(&hash)
+        .fetch_optional(&st.db)
+        .await?;
+    if known.is_none() {
+        return Err(unauthorized());
+    }
     // The write lock is held from here, so two refreshes with the same token
-    // cannot both succeed.
+    // cannot both succeed. Everything is read again inside it.
     let mut tx = db::begin_write(&st.db).await?;
     // device, rotated_at, successor, revoked, account, disabled, node, vault
     type Row = (

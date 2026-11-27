@@ -554,6 +554,26 @@ async fn refresh_rejects_garbage() {
 }
 
 #[tokio::test]
+async fn unknown_refresh_token_does_not_wait_for_the_write_lock() {
+    let srv = spawn().await;
+    // Another writer holds the lock (busy timeout is 5 s).
+    let held = srv.state.db.begin_with("BEGIN IMMEDIATE").await.unwrap();
+    let res = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        srv.post_json(
+            "/v1/refresh",
+            &RefreshReq {
+                refresh_token: "B".repeat(42) + "A",
+            },
+        ),
+    )
+    .await
+    .expect("an unknown token is answered without the write lock");
+    assert_err(&res, 401, ErrorCode::Unauthorized);
+    drop(held);
+}
+
+#[tokio::test]
 async fn access_token_expires() {
     let srv = spawn().await;
     let acct = register(&srv, "gina").await;
