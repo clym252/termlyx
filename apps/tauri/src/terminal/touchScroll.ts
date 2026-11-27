@@ -401,7 +401,7 @@ export function terminalSink(term: Terminal): ScrollSink {
       return;
     }
     const y = shift + (drawnY - term.buffer.active.viewportY) * (h || measure());
-    el.style.transform = `translate3d(0, ${y}px, 0)`;
+    el.style.transform = `translate3d(0px, ${y}px, 0px)`;
   };
   const rendered: IDisposable | undefined = term.onRender?.(() => {
     drawnY = term.buffer.active.viewportY;
