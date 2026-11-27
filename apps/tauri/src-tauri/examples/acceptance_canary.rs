@@ -278,7 +278,12 @@ async fn run(
             .await,
     )?;
     for key in [&key_with_pass, &key_plain] {
-        let export = check("key_export_private", state.key_export_private(key.id).await)?;
+        let export = check(
+            "key_export_private",
+            state
+                .key_export_private(key.id, SecretString::from(inp.master.clone()))
+                .await,
+        )?;
         mem.add_private_key("private_key_line", &export.private_openssh);
         if let Some(blob) = key.public_openssh.split_whitespace().nth(1) {
             mem.add("public_key_blob", blob);

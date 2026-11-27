@@ -122,7 +122,8 @@ export function createTauriApi(mobile: boolean = IS_MOBILE): TetherApi {
       invoke("key_generate", { algo, label, passphrase: passphrase ?? null }),
     keyImport: (text, passphrase, label) =>
       invoke("key_import", { text, passphrase: passphrase ?? null, label: label ?? null }),
-    keyExportPrivate: (id) => invoke("key_export_private", { id }),
+    keyExportPrivate: (id, password) => invoke("key_export_private", { id, password }),
+    keySavePrivate: (id, password) => invoke("key_save_private", { id, password }),
     knownHostsImport: (path) => invoke("known_hosts_import", { path }),
     pickFile: (options) => open({ multiple: false, directory: false, ...options }),
     scanQr: async () => {

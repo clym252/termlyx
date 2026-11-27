@@ -238,7 +238,7 @@ one transaction.
 | `account_secret.kek`      | 73    | `wrap_secret(KEK, account_secret, "account-secret/kek/{vault_id}")`    |
 | `account_secret.recovery` | 73    | `wrap_secret(RecoveryKey, account_secret, "account-secret/recovery/{vault_id}")` |
 | `vault_key.sealed`        | 81    | `seal_vault_key(account_public, VaultKey, vault_id)` (HPKE, above)     |
-| `account_secret.device`   | 73    | optional, quick unlock: `wrap_secret(DeviceKey, account_secret, "account-secret/device/{vault_id}")` |
+| `account_secret.device`   | 73    | optional, quick unlock: `wrap_secret(DeviceKey, account_secret, "account-secret/device/{vault_id}")`; behind Touch ID or Face ID the label is `"account-secret/device/{vault_id}/{hex(SHA-256(enrollment state))}"` (see "Touch ID") |
 | `quick_unlock.biometry`   | any   | optional, macOS and iOS: the Touch ID or Face ID enrollment state (LocalAuthentication `evaluatedPolicyDomainState`) quick unlock was enabled or first used with; not secret |
 | `pending.kdf`, `pending.account_secret.kek` | 28, 73 | optional, sync: a password wrap (and its `kdf`) from the server that has not opened on this device yet; same layouts as `kdf` and `account_secret.kek` |
 | `pending.account_secret.recovery` | 73 | optional, sync: a recovery wrap from the server that has not opened on this device yet; same layout as `account_secret.recovery` |
@@ -286,7 +286,13 @@ slot and to its vault. Records are sealed with the VaultKey as described under
   occasionally a major macOS upgrade) turns quick unlock off without asking;
   biometry unavailable (no sensor, lid closed, locked out) is an error. A
   vault enabled before the gate existed records the state on its first
-  Touch ID unlock. **Limit:** the gate is Termlyx's, not the keychain's. A
+  Touch ID unlock. *(Additive.)* The device wrap is bound to the enrollment
+  state: enabling behind the gate wraps with the label
+  `account-secret/device/{vault_id}/{hex(SHA-256(state))}` (lowercase hex),
+  so deleting `quick_unlock.biometry` cannot carry the wrap over to changed
+  fingers: the unwrap fails. A wrap under the plain label (enabled without a
+  gate, or by a build before the binding) still opens; the first gated
+  unlock rewraps it under the bound label and records the state. **Limit:** the gate is Termlyx's, not the keychain's. A
   `SecAccessControl` with `biometryCurrentSet` needs the data-protection
   keychain, which needs a signed build with a keychain-access-groups
   entitlement; builds are unsigned today. The DeviceKey stays a login-keychain

@@ -183,6 +183,7 @@ macro_rules! handlers {
             vault_cmds::key_generate,
             vault_cmds::key_import,
             vault_cmds::key_export_private,
+            vault_cmds::key_save_private,
             vault_cmds::known_hosts_import,
             sync_cmds::sync_status,
             sync_cmds::sync_parse_code,

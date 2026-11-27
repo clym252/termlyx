@@ -200,18 +200,26 @@ test("export_private_key_asks_first", async ({ page, context }) => {
   await expect(editor.getByLabel("Public key")).toHaveValue(/^ssh-ed25519 /);
   await editor.getByRole("button", { name: "Export private key…" }).click();
 
-  // An explicit confirmation names the risk; cancelling leaves the clipboard alone.
+  // An explicit confirmation names the risk; cancelling saves nothing.
   const confirm = page.getByRole("dialog", { name: "Export private key" });
   await expect(confirm).toContainText("who has it can sign in");
   await confirm.getByRole("button", { name: "Cancel" }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("untouched");
+  await expect(confirm).toBeHidden();
 
+  // It asks for the master password again.
+  await page.evaluate(() => window.__tetherMock.control.setPick("/home/me/laptop"));
   await editor.getByRole("button", { name: "Export private key…" }).click();
-  await page.getByRole("dialog", { name: "Export private key" }).getByRole("button", { name: "Copy private key" }).click();
-  await expect(editor.getByRole("status")).toContainText("Private key copied");
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copied).toContain("BEGIN OPENSSH PRIVATE KEY");
-  // The page never shows it.
+  await confirm.getByLabel("Master password").fill("not it");
+  await confirm.getByRole("button", { name: "Save private key…" }).click();
+  await expect(confirm.getByRole("alert")).toContainText("Wrong master password");
+  await expect(confirm.getByLabel("Master password")).toHaveValue("");
+
+  // The backend writes the file; the key never reaches the page or the clipboard.
+  await confirm.getByLabel("Master password").fill(PASSWORD);
+  await confirm.getByRole("button", { name: "Save private key…" }).click();
+  await expect(confirm).toBeHidden();
+  await expect(editor.getByRole("status")).toContainText("Private key saved to /home/me/laptop");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("untouched");
   expect(await page.content()).not.toContain("BEGIN OPENSSH PRIVATE KEY");
   expect(await page.evaluate(() => document.body.innerText)).not.toContain("BEGIN OPENSSH PRIVATE KEY");
 

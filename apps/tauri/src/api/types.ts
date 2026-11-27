@@ -850,7 +850,18 @@ export interface TetherApi {
   importSshConfig(path: string): Promise<ImportReport>;
   keyGenerate(algo: KeyAlgo, label: string, passphrase?: string): Promise<SshKey>;
   keyImport(text: string, passphrase?: string, label?: string): Promise<SshKey>;
-  keyExportPrivate(id: Id): Promise<KeyExport>;
+  /**
+   * The private key, after the master password (`wrongPassword` otherwise).
+   * Mobile only: the desktop saves it with `keySavePrivate`, so it never
+   * reaches the page.
+   */
+  keyExportPrivate(id: Id, password: string): Promise<KeyExport>;
+  /**
+   * After the master password, the native save dialog, and the backend
+   * writes the private key there (owner-only). The path saved to, or `null`
+   * when the dialog was cancelled. Desktop.
+   */
+  keySavePrivate(id: Id, password: string): Promise<string | null>;
   knownHostsImport(path: string): Promise<KnownHostsImportReport>;
   /** The native "open file" dialog; the chosen path, or `null` when cancelled. */
   pickFile(options?: PickFileOptions): Promise<string | null>;

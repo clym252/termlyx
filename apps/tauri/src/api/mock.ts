@@ -134,7 +134,7 @@ export interface MockControls {
   cancelNextSave(): void;
   /** The paths `saveToDevice` wrote to the device, in order. */
   savedToDevice(): string[];
-  /** What the next `pickFile` resolves with: a path, or `null` for a cancelled dialog (the default). */
+  /** What the next native file dialog (`pickFile`, `keySavePrivate`) resolves with: a path, or `null` for a cancelled dialog (the default). */
   setPick(path: string | null): void;
   /** The options of every `pickFile` call so far. */
   pickCalls(): PickFileOptions[];
@@ -1497,11 +1497,20 @@ export function createMockApi(seed: MockSeed = {}): MockTetherApi {
       const keep = encrypted ? passphrase! : null;
       return storeKey(label || "Imported key", "ssh-ed25519", body, keep);
     },
-    async keyExportPrivate(id) {
+    async keyExportPrivate(id, pw) {
       requireVault();
+      if (pw !== password) throw apiError("wrongPassword", "wrong password");
       const key = keys.get(id);
       if (!key) throw notFound("ssh_key", id);
       return { privateOpenssh: key.privateOpenssh };
+    },
+    async keySavePrivate(id, pw) {
+      requireVault();
+      if (pw !== password) throw apiError("wrongPassword", "wrong password");
+      const key = keys.get(id);
+      if (!key) throw notFound("ssh_key", id);
+      if (pickedFile !== null) files.set(pickedFile, key.privateOpenssh);
+      return pickedFile;
     },
     async pickFile(options) {
       pickCalls.push(clone(options ?? {}));

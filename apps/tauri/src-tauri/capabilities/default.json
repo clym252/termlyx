@@ -34,6 +34,7 @@
     "allow-key-generate",
     "allow-key-import",
     "allow-key-export-private",
+    "allow-key-save-private",
     "allow-known-hosts-import",
     "allow-sync-status",
     "allow-sync-parse-code",

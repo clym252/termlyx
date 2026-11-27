@@ -1135,15 +1135,56 @@ impl AppState {
         .await
     }
 
-    /// The stored private key, for the user to save elsewhere.
-    pub async fn key_export_private(&self, id: Id) -> Result<KeyExport, CmdError> {
+    /// The stored private key, for the user to copy elsewhere (mobile; the
+    /// desktop saves it with [`key_save_private`](Self::key_save_private)),
+    /// after the master password.
+    pub async fn key_export_private(
+        &self,
+        id: Id,
+        password: SecretString,
+    ) -> Result<KeyExport, CmdError> {
+        let (_, private) = self.key_private(id, password).await?;
+        Ok(KeyExport {
+            private_openssh: private.expose_secret().to_owned(),
+        })
+    }
+
+    /// Saves the stored private key to the file `pick` returns (given a
+    /// suggested file name; `None` cancels), after the master password. The
+    /// key goes from the vault to the file without reaching the webview; the
+    /// file is owner-only on Unix. `pick` runs on a blocking thread.
+    pub async fn key_save_private(
+        &self,
+        id: Id,
+        password: SecretString,
+        pick: impl FnOnce(String) -> Option<PathBuf> + Send + 'static,
+    ) -> Result<Option<PathBuf>, CmdError> {
+        let (label, private) = self.key_private(id, password).await?;
+        tauri::async_runtime::spawn_blocking(move || {
+            let Some(path) = pick(key_file_name(&label)) else {
+                return Ok(None);
+            };
+            write_private_key(&path, private.expose_secret())?;
+            Ok(Some(path))
+        })
+        .await
+        .map_err(|e| CmdError::internal(format!("key save failed: {e}")))?
+    }
+
+    /// A key's label and private key, once the master password checks out:
+    /// re-authentication before every private-key egress.
+    async fn key_private(
+        &self,
+        id: Id,
+        password: SecretString,
+    ) -> Result<(String, SecretString), CmdError> {
         self.with_vault(move |v| {
+            v.verify_password(&password)?;
             let key = v
                 .get::<SshKey>(id)?
                 .ok_or_else(|| not_found("ssh_key", id))?;
-            Ok(KeyExport {
-                private_openssh: key.private_openssh.expose_secret().to_owned(),
-            })
+            let private = SecretString::from(key.private_openssh.expose_secret().to_owned());
+            Ok((key.label, private))
         })
         .await
     }
@@ -1585,8 +1626,69 @@ pub async fn key_import(
 }
 
 #[tauri::command]
-pub async fn key_export_private(state: State<'_, AppState>, id: Id) -> Result<KeyExport, CmdError> {
-    state.key_export_private(id).await
+pub async fn key_export_private(
+    state: State<'_, AppState>,
+    id: Id,
+    password: SecretString,
+) -> Result<KeyExport, CmdError> {
+    state.key_export_private(id, password).await
+}
+
+/// The native save dialog, then the write, both here: `null` when cancelled.
+#[tauri::command]
+pub async fn key_save_private(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    id: Id,
+    password: SecretString,
+) -> Result<Option<String>, CmdError> {
+    use tauri_plugin_dialog::DialogExt;
+    let saved = state
+        .key_save_private(id, password, move |name| {
+            let picked = app
+                .dialog()
+                .file()
+                .set_file_name(name)
+                .blocking_save_file()?;
+            picked.into_path().ok()
+        })
+        .await?;
+    Ok(saved.map(|p| p.display().to_string()))
+}
+
+/// The save dialog's suggested name: the label, safe as a file name.
+fn key_file_name(label: &str) -> String {
+    let name: String = label
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || "-_.".contains(c) {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    match name.trim_matches(['.', '_']) {
+        "" => "id_key".to_owned(),
+        _ => name,
+    }
+}
+
+/// Writes a private key to `path`, owner-only (0600) on Unix even when it
+/// replaces a wider file.
+fn write_private_key(path: &std::path::Path, text: &str) -> Result<(), CmdError> {
+    use std::io::Write;
+    let fail = |e: std::io::Error| CmdError::io(format!("could not save {}: {e}", path.display()));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+    let mut file = options.open(path).map_err(fail)?;
+    // An existing file keeps its mode: narrow it before the key goes in.
+    #[cfg(unix)]
+    file.set_permissions(std::os::unix::fs::PermissionsExt::from_mode(0o600))
+        .map_err(fail)?;
+    file.write_all(text.as_bytes()).map_err(fail)
 }
 
 #[tauri::command]
@@ -1612,6 +1714,29 @@ mod tests {
             no_username_message(false),
             "no username: the local login name is unknown; set one on an identity"
         );
+    }
+
+    #[test]
+    fn key_file_name_is_a_safe_file_name() {
+        assert_eq!(key_file_name("laptop"), "laptop");
+        assert_eq!(key_file_name("id_ed25519.work"), "id_ed25519.work");
+        assert_eq!(key_file_name("my key/../x"), "my_key_.._x");
+        assert_eq!(key_file_name(".."), "id_key");
+        assert_eq!(key_file_name(""), "id_key");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn private_key_file_is_owner_only_even_over_a_wider_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("key");
+        std::fs::write(&path, "old contents that are longer").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        write_private_key(&path, "KEY").unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "KEY");
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
     }
 
     #[test]

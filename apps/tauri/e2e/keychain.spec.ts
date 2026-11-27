@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import {
+  PASSWORD,
   createVault,
   generateKey,
   goTo,
@@ -57,13 +58,13 @@ test("generate_ed25519_shows_fingerprint_and_copy_public", async ({ page, contex
 test("import_key_needs_passphrase", async ({ page }) => {
   await createVault(page);
   // An encrypted key, as another machine would have it.
-  const pem = await page.evaluate(async () => {
+  const pem = await page.evaluate(async (pw) => {
     const api = window.__tetherMock;
     const k = await api.keyGenerate("ed25519", "source", "s3cret phrase");
-    const { privateOpenssh } = await api.keyExportPrivate(k.id);
+    const { privateOpenssh } = await api.keyExportPrivate(k.id, pw);
     await api.deleteEntity("ssh_key", k.id);
     return privateOpenssh;
-  });
+  }, PASSWORD);
 
   await goTo(page, "Keychain");
   await expect(page.getByText("No keys yet")).toBeVisible();
