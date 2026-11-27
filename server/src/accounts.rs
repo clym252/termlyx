@@ -591,7 +591,6 @@ mod tests {
                     fake_kdf(&secret, name, now + i * step).salt
                         != fake_kdf(&secret, name, now + (i + 1) * step).salt
                 })
-                .map(|i| i as i64)
                 .collect::<Vec<_>>()
         };
         let (a, b) = (changes("alice"), changes("bob"));
