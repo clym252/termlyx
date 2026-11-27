@@ -97,9 +97,10 @@ export TERMLYX_PERSONAL_PATTERNS=/path/to/private/patterns   # one regex per lin
 ```
 
 Needs `gitleaks` on `PATH`. If the pattern file is missing the hook fails
-(exit 2) instead of passing silently. CI skips the personal scan only for fork
-PRs and Dependabot runs, which get no secrets; every other run fails if the
-`PERSONAL_SCAN_PATTERNS` secret is unset.
+(exit 2) instead of passing silently. CI runs the personal scan only on pushes
+to `main` (the patterns are a `personal-scan` environment secret that pull
+requests cannot reach), so the hook is what checks a branch before it is
+pushed; on `main` an unset secret fails the run.
 
 The real pattern file must not contain the synthetic word used in
 `scripts/scan-personal.test.sh`, or that file matches itself.

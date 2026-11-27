@@ -16,7 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@${SHA} # v4.2.2
       - uses: ./.github/actions/local
-      - run: echo \${{ secrets.GITHUB_TOKEN }} \${{ secrets.PERSONAL_SCAN_PATTERNS }}
+      - run: echo \${{ secrets.GITHUB_TOKEN }}
+  scan:
+    runs-on: ubuntu-latest
+    environment: personal-scan
+    steps:
+      - run: echo \${{ secrets.PERSONAL_SCAN_PATTERNS }}
   sign:
     runs-on: macos-latest
     environment: release
@@ -66,10 +71,20 @@ test("flags write access in top-level permissions", () => {
 });
 
 test("flags a secret outside a release-environment job", () => {
-  one(good.replace("secrets.PERSONAL_SCAN_PATTERNS", "secrets.APPLE_CERTIFICATE"), /line 13: .*APPLE_CERTIFICATE/);
-  one(good.replace("secrets.PERSONAL_SCAN_PATTERNS", "secrets['APPLE_CERTIFICATE']"), /secrets/);
-  one(good.replace("secrets.PERSONAL_SCAN_PATTERNS", "toJSON(secrets)"), /secrets/);
+  one(good.replace("secrets.GITHUB_TOKEN", "secrets.APPLE_CERTIFICATE"), /line 13: .*APPLE_CERTIFICATE/);
+  one(good.replace("secrets.GITHUB_TOKEN", "secrets['APPLE_CERTIFICATE']"), /secrets/);
+  one(good.replace("secrets.GITHUB_TOKEN", "toJSON(secrets)"), /secrets/);
   one(good.replace("environment: release", "environment: staging"), /TAURI_SIGNING_PRIVATE_KEY/);
+  one(good.replace("secrets.PERSONAL_SCAN_PATTERNS", "secrets.APPLE_CERTIFICATE"), /APPLE_CERTIFICATE used outside a job with environment: release/);
+});
+
+test("allows the scan patterns only in the personal-scan environment", () => {
+  one(good.replace("secrets.GITHUB_TOKEN", "secrets.PERSONAL_SCAN_PATTERNS"), /line 13: .*PERSONAL_SCAN_PATTERNS.*personal-scan/);
+  one(good.replace("environment: personal-scan", "environment: staging"), /PERSONAL_SCAN_PATTERNS.*personal-scan/);
+  const flow = good.replace("environment: personal-scan", "environment: { name: personal-scan }");
+  assert.deepEqual(checkWorkflow(flow), []);
+  // release may use any secret, the scan patterns included.
+  assert.deepEqual(checkWorkflow(good.replace("secrets.TAURI_SIGNING_PRIVATE_KEY", "secrets.PERSONAL_SCAN_PATTERNS")), []);
 });
 
 test("flags a secret in top-level env", () => {
