@@ -524,15 +524,15 @@ describe("terminalSink", () => {
     expect(s.lineHeight()).toBe(LINE);
     expect(s.room?.()).toEqual({ back: 100, forward: 0 });
     s.offset?.(7);
-    expect(screen.style.transform).toBe("translate3d(0, 7px, 0)");
+    expect(screen.style.transform).toBe("translate3d(0px, 7px, 0px)");
     // One line back, not yet redrawn: the old rows move down a whole line more, so nothing jumps.
     s.lines(-1);
     expect(active.viewportY).toBe(99);
     s.offset?.(-8);
-    expect(screen.style.transform).toBe(`translate3d(0, ${LINE - 8}px, 0)`);
+    expect(screen.style.transform).toBe(`translate3d(0px, ${LINE - 8}px, 0px)`);
     // Redrawn: just the sub-line part.
     render();
-    expect(screen.style.transform).toBe("translate3d(0, -8px, 0)");
+    expect(screen.style.transform).toBe("translate3d(0px, -8px, 0px)");
     // At rest: no transform, and new output at rest is left alone.
     s.offset?.(null);
     expect(screen.style.transform).toBe("");
